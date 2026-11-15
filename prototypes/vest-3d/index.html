@@ -1,0 +1,1245 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OrbitCare Vest — 3D sensor preview</title>
+<!-- Interactive 3D preview of the OrbitCare vest and its sensor placement.
+     Look: Lara's concept image (white featureless mannequin, charcoal technical vest, subtle blue status lights),
+     built as an industrial-design model: sculpted mannequin, paneled vest, bevelled sensor housings, studio light.
+     Sensor placement: physiology + the sources listed on the page.
+     Works offline: three.js r160 and the fonts are served from this project. -->
+<link rel="stylesheet" href="../../assets/css/fonts.css">
+<style>
+:root {
+    --navy: #1b2350; --ink: #1b2340; --text: #3a4263; --muted: #6b7393; --line: #e5e8f4;
+    --page: #f3f5fc; --card: #fff; --accent: #2f5fd8; --accent-soft: #e8eefc;
+    --font: "Lexend", "IBM Plex Sans Arabic", system-ui, sans-serif;
+}
+* { box-sizing: border-box; margin: 0; }
+[hidden] { display: none !important; }   /* the live chip and back link stay hidden until live data arrives */
+html, body { height: 100%; }
+body { min-height: 100vh; background: var(--page); color: var(--text); font-family: var(--font); }
+button { font: inherit; cursor: pointer; }
+
+.top { display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem 1.25rem; padding: 1.1rem 1.5rem; }
+.brand { display: flex; align-items: center; gap: 0.5rem; font-weight: 600; color: var(--navy); }
+.brand svg { width: 1.6rem; height: 1.6rem; color: var(--accent); }
+.titles { flex: 1; min-width: 14rem; }
+.titles h1 { font-size: 1.45rem; font-weight: 700; color: var(--ink); }
+.titles p { margin-top: 0.15rem; font-size: 0.9rem; color: var(--muted); }
+.chip { padding: 0.3rem 0.8rem; border-radius: 999px; background: #fff4dd; color: #a86c06; font-size: 0.8rem; font-weight: 600; }
+.tools { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.tool { min-height: 2.4rem; padding: 0 0.9rem; border: 1px solid #d3d9eb; border-radius: 999px; background: #fff; color: var(--ink); font-size: 0.875rem; }
+.tool:hover { border-color: var(--accent); color: var(--accent); }
+.tool[aria-pressed="true"] { background: var(--navy); border-color: var(--navy); color: #fff; }
+
+.layout { display: grid; grid-template-columns: minmax(0, 1fr) 24rem; gap: 1.25rem; padding: 0 1.5rem 1.5rem; }
+.stage { position: relative; min-height: 34rem; height: calc(100vh - 7rem); border: 1px solid var(--line); border-radius: 1.25rem;
+    background: radial-gradient(ellipse at 50% 28%, #f7f8fa 0%, #e4e6eb 55%, #cfd2da 100%); overflow: hidden; box-shadow: 0 10px 30px rgba(31, 45, 110, 0.06); }
+.stage canvas { display: block; width: 100%; height: 100%; touch-action: none; }
+.labels { position: absolute; inset: 0; pointer-events: none; }
+.label { position: absolute; display: flex; align-items: center; gap: 0.35rem; padding: 0.2rem 0.6rem 0.2rem 0.25rem;
+    border-radius: 999px; background: rgba(255, 255, 255, 0.94); box-shadow: 0 4px 14px rgba(27, 35, 80, 0.14);
+    font-size: 0.78rem; font-weight: 500; color: var(--ink); white-space: nowrap; transform: translate(-50%, -140%);
+    pointer-events: auto; cursor: pointer; transition: opacity 0.2s ease; border: 1px solid transparent; }
+[dir="rtl"] .label { padding: 0.2rem 0.25rem 0.2rem 0.6rem; }
+.label.is-selected { border-color: var(--accent); background: #fff; }
+.label.is-hidden { opacity: 0; pointer-events: none; }
+.num { display: inline-grid; place-items: center; width: 1.35rem; height: 1.35rem; border-radius: 50%; color: #fff; font-size: 0.72rem; font-weight: 700; flex: none; }
+.hint { position: absolute; inset-inline-start: 1rem; bottom: 1rem; padding: 0.4rem 0.75rem; border-radius: 0.6rem; background: rgba(255, 255, 255, 0.85); font-size: 0.8rem; color: var(--muted); }
+.legend { position: absolute; inset-inline-end: 1rem; top: 1rem; display: grid; gap: 0.35rem; padding: 0.6rem 0.8rem; border-radius: 0.75rem; background: rgba(255, 255, 255, 0.88); font-size: 0.78rem; }
+.legend span { display: flex; align-items: center; gap: 0.45rem; }
+.legend i { width: 0.65rem; height: 0.65rem; border-radius: 50%; }
+.legend .ring { background: transparent; border: 2px dashed var(--muted); }
+
+.panel { display: flex; flex-direction: column; gap: 1rem; max-height: calc(100vh - 7rem); overflow-y: auto; padding: 1.25rem; border: 1px solid var(--line); border-radius: 1.25rem; background: var(--card); box-shadow: 0 10px 30px rgba(31, 45, 110, 0.06); }
+.panel h2 { font-size: 1.05rem; font-weight: 600; color: var(--ink); }
+.panel h3 { font-size: 0.9rem; font-weight: 600; color: var(--ink); }
+.sensor-list { display: grid; gap: 0.35rem; padding: 0; list-style: none; }
+.sensor-btn { display: flex; align-items: center; gap: 0.6rem; width: 100%; padding: 0.55rem 0.65rem; border: 1px solid var(--line); border-radius: 0.8rem; background: #fff; text-align: start; color: var(--ink); }
+.sensor-btn:hover { border-color: #b9c6ea; }
+.sensor-btn[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); }
+.sensor-btn strong { flex: 1; font-weight: 500; font-size: 0.9rem; }
+.cat { padding: 0.15rem 0.5rem; border-radius: 0.4rem; font-size: 0.7rem; font-weight: 600; white-space: nowrap; }
+.cat[data-cat="vitals"] { background: #fdecef; color: #c32f43; }
+.cat[data-cat="body"] { background: #e3f7ee; color: #198553; }
+.cat[data-cat="radiation"] { background: #fbf5d8; color: #8a7406; }
+.cat[data-cat="electronics"] { background: #e9ecf8; color: var(--navy); }
+.detail { padding: 1rem; border-radius: 1rem; background: #f6f7fb; }
+.detail-head { display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.6rem; }
+.detail-head h3 { flex: 1; font-size: 1rem; }
+.detail dl { display: grid; gap: 0.55rem; }
+.detail dt { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.02em; color: var(--muted); }
+.detail dd { margin: 0.1rem 0 0; font-size: 0.88rem; line-height: 1.55; color: var(--text); }
+.offbody { display: grid; gap: 0.5rem; padding: 0; list-style: none; font-size: 0.85rem; line-height: 1.5; }
+.offbody li { padding: 0.6rem 0.75rem; border: 1px dashed #cfd6ea; border-radius: 0.75rem; }
+.offbody strong { color: var(--ink); font-weight: 600; }
+.periodic { padding: 1rem; border: 1px solid #d9e1f5; border-radius: 1rem; background: linear-gradient(180deg, #f4f7ff 0%, #ffffff 100%); }
+.periodic h3 { display: flex; align-items: center; gap: 0.5rem; }
+.periodic h3::before { content: ""; width: 0.55rem; height: 0.55rem; border-radius: 50%; background: var(--accent); }
+.periodic-intro { margin-top: 0.3rem; font-size: 0.8rem; line-height: 1.5; color: var(--muted); }
+.periodic-list { display: grid; gap: 0.6rem; margin-top: 0.75rem; padding: 0; list-style: none; }
+.periodic-list li { padding: 0.75rem; border-radius: 0.8rem; background: #fff; border: 1px solid var(--line); }
+.periodic-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.35rem 0.6rem; }
+.periodic-head strong { font-size: 0.9rem; font-weight: 600; color: var(--ink); }
+.periodic-when { padding: 0.15rem 0.55rem; border-radius: 999px; background: var(--accent-soft); color: var(--accent); font-size: 0.72rem; font-weight: 600; white-space: nowrap; }
+.periodic-list p { margin-top: 0.4rem; font-size: 0.82rem; line-height: 1.55; color: var(--text); }
+.periodic-list .periodic-note { color: var(--muted); font-size: 0.78rem; }
+/* live: this astronaut's recorded signals, shown on the sensor that would measure them */
+.back { display: inline-flex; align-items: center; gap: 0.35rem; text-decoration: none; }
+.back svg { width: 1rem; height: 1rem; }
+[dir="rtl"] .back svg { transform: scaleX(-1); }
+.live-chip { display: inline-flex; align-items: center; gap: 0.4rem; background: #e3f7ee; color: #157a4b; }
+.live-chip::before { content: ""; width: 0.5rem; height: 0.5rem; border-radius: 50%; background: #1fa463; animation: blink 1.6s ease-in-out infinite; }
+@keyframes blink { 50% { opacity: 0.25; } }
+.label-val { margin-inline-start: 0.2rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.live { margin-bottom: 0.9rem; padding: 0.85rem; border-radius: 0.85rem; background: #fff; border: 1px solid var(--line); }
+.live-head { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; font-size: 0.75rem; font-weight: 600; color: var(--muted); }
+.live-head span:last-child { font-variant-numeric: tabular-nums; }
+.live-values { display: flex; flex-wrap: wrap; gap: 0.4rem 1.2rem; margin-top: 0.45rem; }
+.live-val { display: grid; }
+.live-val b { display: flex; align-items: baseline; gap: 0.3rem; font-size: 1.6rem; font-weight: 600; color: var(--ink); font-variant-numeric: tabular-nums; }
+.live-val b small { font-size: 0.78rem; font-weight: 500; color: var(--muted); }
+.live-val > span { display: flex; align-items: center; gap: 0.35rem; font-size: 0.78rem; color: var(--text); }
+.live-val i { width: 0.5rem; height: 0.5rem; border-radius: 50%; background: #c7ccdd; }
+.live-val i[data-c="GREEN"] { background: #1fa463; } .live-val i[data-c="YELLOW"] { background: #e6a01c; } .live-val i[data-c="RED"] { background: #e23d50; }
+.live canvas { display: block; width: 100%; height: 4.5rem; margin-top: 0.6rem; border-radius: 0.5rem; background: #f6f7fb; }
+.live-wave-name { margin-top: 0.3rem; font-size: 0.72rem; color: var(--muted); }
+.live-src { margin-top: 0.45rem; font-size: 0.72rem; line-height: 1.5; color: var(--muted); }
+.sources { font-size: 0.75rem; line-height: 1.6; color: var(--muted); }
+.sources a { color: var(--accent); }
+
+@media (max-width: 980px) {
+    .layout { grid-template-columns: minmax(0, 1fr); }
+    .stage { height: 75vh; min-height: 28rem; }
+    .panel { max-height: none; }
+}
+@media (max-width: 560px) {
+    .top, .layout { padding-inline: 1rem; }
+    .legend { display: none; }
+}
+</style>
+<script type="importmap">
+{ "imports": {
+    "three": "../../assets/vendor/three/three.module.min.js",
+    "three/addons/controls/OrbitControls.js": "../../assets/vendor/three/OrbitControls.js",
+    "three/addons/environments/RoomEnvironment.js": "../../assets/vendor/three/RoomEnvironment.js"
+} }
+</script>
+</head>
+<body>
+<header class="top">
+    <div class="brand"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 0C12.7 7.6 16.4 11.3 24 12C16.4 12.7 12.7 16.4 12 24C11.3 16.4 7.6 12.7 0 12C7.6 11.3 11.3 7.6 12 0Z" fill="currentColor"/></svg>OrbitCare</div>
+    <div class="titles"><h1 data-i18n="title"></h1><p data-i18n="subtitle"></p></div>
+    <span class="chip live-chip" data-live-chip hidden></span>
+    <div class="tools">
+        <a class="tool back" data-back hidden href="../../pages/dashboard.php"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M11 6l-6 6 6 6"/></svg><span data-i18n="back"></span></a>
+        <button class="tool" type="button" data-xray aria-pressed="false"></button>
+        <button class="tool" type="button" data-rotate aria-pressed="true"></button>
+        <button class="tool" type="button" data-reset></button>
+        <button class="tool" type="button" data-lang></button>
+    </div>
+</header>
+
+<main class="layout">
+    <section class="stage" data-stage>
+        <canvas data-canvas></canvas>
+        <div class="labels" data-labels></div>
+        <div class="legend" data-legend></div>
+        <p class="hint" data-i18n="hint"></p>
+    </section>
+
+    <aside class="panel">
+        <h2 data-i18n="on_body"></h2>
+        <ol class="sensor-list" data-list></ol>
+        <section class="detail" data-detail aria-live="polite"></section>
+        <section class="periodic" aria-labelledby="periodic-title">
+            <h3 id="periodic-title" data-i18n="periodic"></h3>
+            <p class="periodic-intro" data-i18n="periodic_intro"></p>
+            <ul class="periodic-list" data-periodic></ul>
+        </section>
+        <section class="periodic" aria-labelledby="future-title">
+            <h3 id="future-title" data-i18n="future"></h3>
+            <p class="periodic-intro" data-i18n="future_intro"></p>
+            <ul class="periodic-list" data-future></ul>
+        </section>
+        <h3 data-i18n="off_body"></h3>
+        <ul class="offbody" data-offbody></ul>
+        <p class="sources" data-sources></p>
+    </aside>
+</main>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+
+// ================================================================ texts (Arabic / English)
+const UI = {
+    ar: {
+        title: 'سترة OrbitCare — معاينة الحساسات', subtitle: 'السترة وعصابة الرأس وأماكن الحساسات. اسحب للتدوير، واضغط على أي حساس، وجرّب «الأشعة» لترى ما تحت السترة.',
+        hint: 'اسحب للتدوير · عجلة الفأرة للتقريب · اضغط على حساس',
+        rotate_on: 'إيقاف الدوران', rotate_off: 'تشغيل الدوران', reset: 'إعادة العرض', lang: 'English', xray: 'الأشعة: ما تحت السترة',
+        on_body: 'الحساسات على الجسم', off_body: 'قياسات المقصورة، وما استبعدناه',
+        periodic: 'فحوصات دورية — خارج السترة', periodic_intro: 'أجهزة في المحطة أو على الأرض لا تُلبس، تُستخدم في مواعيد ثابتة، وتُتابَع نتائجها مع بقية مؤشرات رائد الفضاء.',
+        future: 'بحث مستقبلي — النوم', future_intro: 'فكرة واعدة علميًا لم تُجرَّب في الفضاء بعد؛ نعرضها كاتجاه بحثي وليس كقطعة جاهزة.',
+        cat_vitals: 'القلب والتنفس', cat_body: 'الجسم والحركة', cat_radiation: 'الإشعاع', cat_electronics: 'إلكترونيات', inside: 'داخل السترة — يظهر بالأشعة',
+        measures: 'ماذا يقيس / ماذا يفعل', mount: 'التثبيت وملامسة الجلد', real: 'القطعة الحقيقية المقترحة', why: 'لماذا هذا المكان',
+        sources: 'المصادر:',
+        back: 'لوحة التحكم', live_chip: 'قراءات حية · تسجيل حقيقي', live_now: 'القراءة الآن', live_rec: 'التسجيل {t}', live_done: 'انتهى التسجيل',
+        live_none: 'لا توجد قراءة في هذه اللحظة من التسجيل',
+        m_heart_rate: 'نبض القلب', m_spo2: 'الأكسجين', m_pulse_rate: 'النبض', m_respiratory_rate: 'التنفس',
+        u_bpm: 'نبضة/د', u_pct: '%', u_brpm: 'نفس/د',
+        w_ecg: 'تخطيط القلب (Lead II) — آخر 5 ثوانٍ', w_ppg: 'موجة النبض الضوئية — آخر 5 ثوانٍ', w_resp: 'موجة التنفس — آخر 12 ثانية',
+        live_src: 'من تسجيل حقيقي لمريض في العناية المركزة (PhysioNet BIDMC، السجل {record})، معروض على الحساس الذي سيقيسه في السترة. التسجيل الأصلي قاس النبض الضوئي من الإصبع والتنفس عبر أقطاب الصدر.',
+        m_skin_temperature: 'حرارة الجلد', m_skin_conductance: 'توصيل الجلد', m_movement: 'مؤشر الحركة', m_radiation_dose_rate: 'معدل الجرعة الآن',
+        m_day_mean: 'متوسط اليوم كله', m_logged_dose: 'جرعتك المسجّلة', m_resistance: 'تمارين المقاومة', m_aerobic: 'تمارين هوائية',
+        u_c: '°م', u_rel: 'وحدة نسبية', u_ugyh: 'ميكروغراي/ساعة', u_min: 'دقيقة',
+        w_body: 'آخر 60 ثانية', w_dose: 'القراءات الأخيرة',
+        src_body: 'تسجيل حقيقي من PhysioNet لمتطوّع سليم رقم {n} (حساسات على المعصم)، معروض على الحساس الذي سيقيسه في السترة — شخص غير صاحب تسجيل القلب. حركة وتوصيل الجلد بوحدات نسبية كما نُشرت.',
+        src_nasa: 'بيانات NASA حقيقية من محطة الفضاء: كاشف DosTel1 في وحدة Columbus، {date} بتوقيت UTC (NASA OSDR RadLab). متوسط اليوم × 24 ساعة ≈ {daily} ملّي غراي.',
+        src_checkin: 'من تسجيلك اليومي ({date}).', checkin_head: 'من التسجيل اليومي', no_checkin: 'لا يوجد تسجيل يومي بعد — دقائق التمرين تظهر هنا بعد أول تسجيل.',
+    },
+    en: {
+        title: 'OrbitCare Vest — sensor preview', subtitle: 'The vest, the headband and where each sensor sits. Drag to rotate, click any sensor, and try X-ray to see under the vest.',
+        hint: 'Drag to rotate · scroll to zoom · click a sensor',
+        rotate_on: 'Stop rotating', rotate_off: 'Rotate', reset: 'Reset view', lang: 'العربية', xray: 'X-ray: under the vest',
+        on_body: 'Sensors on the body', off_body: 'Cabin measurements, and what we left out',
+        periodic: 'Periodic checks — off the vest', periodic_intro: 'Station or ground equipment, not worn, used on a fixed schedule, with results followed alongside the astronaut’s other indicators.',
+        future: 'Future research — sleep', future_intro: 'A scientifically promising idea not yet tested in space; shown as a research direction, not a ready part.',
+        cat_vitals: 'Heart and breathing', cat_body: 'Body and motion', cat_radiation: 'Radiation', cat_electronics: 'Electronics', inside: 'Inside the vest — shown in X-ray',
+        measures: 'What it measures / does', mount: 'Mounting and skin contact', real: 'Suggested real part', why: 'Why here',
+        sources: 'Sources:',
+        back: 'Dashboard', live_chip: 'Live readings · real recording', live_now: 'Reading now', live_rec: 'Recording {t}', live_done: 'Recording finished',
+        live_none: 'No reading at this point of the recording',
+        m_heart_rate: 'Heart rate', m_spo2: 'Oxygen', m_pulse_rate: 'Pulse', m_respiratory_rate: 'Breathing',
+        u_bpm: 'bpm', u_pct: '%', u_brpm: 'breaths/min',
+        w_ecg: 'ECG (lead II) — last 5 s', w_ppg: 'Optical pulse wave — last 5 s', w_resp: 'Breathing wave — last 12 s',
+        live_src: 'From a real recording of an intensive-care patient (PhysioNet BIDMC, record {record}), shown on the sensor that would measure it in the vest. The original recording took the optical pulse at the fingertip and breathing through chest electrodes.',
+        m_skin_temperature: 'Skin temperature', m_skin_conductance: 'Skin conductance', m_movement: 'Movement index', m_radiation_dose_rate: 'Dose rate now',
+        m_day_mean: 'Whole-day average', m_logged_dose: 'Your logged dose', m_resistance: 'Resistance exercise', m_aerobic: 'Aerobic exercise',
+        u_c: '°C', u_rel: 'relative units', u_ugyh: 'µGy/h', u_min: 'min',
+        w_body: 'Last 60 seconds', w_dose: 'Recent readings',
+        src_body: 'Real recording from PhysioNet of healthy volunteer {n} (wrist sensors), shown on the sensor that would measure it in the vest — a different person from the heart recording. Movement and skin conductance are in relative units, as published.',
+        src_nasa: 'Real NASA data from the ISS: DosTel1 detector, Columbus module, {date} UTC (NASA OSDR RadLab). Whole-day average × 24 h ≈ {daily} mGy.',
+        src_checkin: 'From your daily check-in ({date}).', checkin_head: 'From the daily check-in', no_checkin: 'No daily check-in yet — exercise minutes appear here after the first one.',
+    },
+};
+
+// Placement on the torso: world height y and angle around the body t (0 = front, + = the wearer's left).
+// inside: true → under the outer vest layer (skin contact or base layer); visible in X-ray.
+const SENSORS = [
+    {
+        id: 'ecg', color: '#e23d50', cat: 'vitals', kind: 'electrodes', inside: true,
+        points: [{ y: 0.79, t: -0.62 }, { y: 0.79, t: 0.62 }, { y: 0.6, t: 0.78 }],
+        name: { ar: 'أقطاب تخطيط القلب (3)', en: 'ECG electrodes (3)' }, short: { ar: 'تخطيط القلب', en: 'ECG' },
+        measures: { ar: 'نبض القلب من الإشارة الكهربائية للقلب.', en: 'Heart rate, from the heart’s electrical signal.' },
+        mount: { ar: 'داخل السترة وتلامس الجلد مباشرة: أقطاب نسيجية موصلة تُثبَّت بكبسات على بطانة ضاغطة، والأسلاك داخل القماش.', en: 'Inside the vest, in direct skin contact: conductive textile electrodes snapped onto a compression liner; wires run inside the fabric.' },
+        real: { ar: 'دائرة تخطيط قلب (مثل AD8232) مع 3 أقطاب نسيجية.', en: 'An ECG front-end (e.g. AD8232) with 3 textile electrodes.' },
+        why: { ar: 'التوزيع المعتاد لثلاثة أقطاب: أعلى الصدر يمينًا ويسارًا وأسفل الأضلاع يسارًا. قميص Astroskin يستخدم تخطيط قلب بثلاثة أقطاب. يجب أن تكون البطانة ضاغطة وملاصقة: دراسة لـ NASA وجدت أن تحرك الأقطاب يضعف الإشارة.',
+              en: 'The usual 3-lead layout: upper right and left chest, lower left ribs. Astroskin’s shirt uses a 3-lead ECG. The liner must be snug (compression fit): a NASA analog study found that electrode movement degraded the signal.' },
+    },
+    {
+        id: 'breath', color: '#1f9e9a', cat: 'vitals', kind: 'band', y: 0.68, inside: true,
+        name: { ar: 'حزام التنفس', en: 'Breathing band' }, short: { ar: 'التنفس', en: 'Breathing' },
+        measures: { ar: 'معدل التنفس من تمدد الصدر مع كل نفس.', en: 'Respiratory rate, from the chest expanding with each breath.' },
+        mount: { ar: 'داخل السترة حول الصدر فوق البطانة؛ لا يحتاج ملامسة الجلد لكن يجب أن يبقى مشدودًا.', en: 'Inside the vest, around the chest over the liner; no skin contact needed, but it must stay snug.' },
+        real: { ar: 'حزام تمدد (حساس شدّ) حول الصدر.', en: 'A stretch (strain) band around the chest.' },
+        why: { ar: 'القفص الصدري يتمدد مع التنفس، فالحزام حوله يلتقط كل نفس. قميص Astroskin فيه حساسات تنفس مدمجة.', en: 'The rib cage expands with every breath, so a band around it picks each one up. Astroskin’s shirt has built-in breathing sensors.' },
+    },
+    {
+        id: 'ppg', color: '#7d5ae6', cat: 'vitals', kind: 'headband',
+        name: { ar: 'عصابة الجبهة (الأكسجين)', en: 'Forehead headband (oxygen)' }, short: { ar: 'الأكسجين', en: 'SpO₂' },
+        measures: { ar: 'نسبة الأكسجين في الدم (SpO₂) والنبض، بالضوء عبر الجلد. ومن نفس الإشارة يمكن تقدير معدل التنفس كقيمة احتياطية لحزام التنفس.', en: 'Blood oxygen (SpO₂) and pulse, using light through the skin. The same signal can also estimate breathing rate as a backup to the breathing band.' },
+        mount: { ar: 'على الجبهة ويلامس الجلد، داخل غطاء يحجب ضوء المقصورة؛ السلك يمر في العصابة ثم خلف الرقبة إلى وحدة التحكم.', en: 'On the forehead in skin contact, inside a pod that blocks cabin light; the cable runs in the band, then behind the neck to the controller.' },
+        real: { ar: 'حساس أكسجين انعكاسي (مثل MAX30102) ملاصق للجبهة.', en: 'A reflectance pulse-oximetry sensor (e.g. MAX30102) against the forehead.' },
+        why: { ar: 'Astroskin عبارة عن قميص مع عصابة رأس. قياس الأكسجين من الرقبة ما زال تجريبيًا (دراسات صغيرة ونتائج متضاربة)، لذلك اختار الفريق الجبهة.', en: 'Astroskin is a shirt plus a headband. Measuring SpO₂ at the neck is still experimental (small studies, mixed results), so the team chose the forehead.' },
+    },
+    {
+        id: 'temp', color: '#ef8a2e', cat: 'body', kind: 'disc', y: 0.74, t: 1.32, inside: true,
+        name: { ar: 'حرارة الجلد', en: 'Skin temperature' }, short: { ar: 'الحرارة', en: 'Skin temp' },
+        measures: { ar: 'حرارة سطح الجلد — وليست حرارة الجسم الداخلية.', en: 'Skin surface temperature — not core body temperature.' },
+        mount: { ar: 'داخل السترة ويلامس الجلد، معزول عن الهواء الخارجي.', en: 'Inside the vest in skin contact, insulated from outside air.' },
+        real: { ar: 'MAX30205: مصمم لقياس حرارة الجسم بدقة ±0.1 °م بين 37 و39 °م، أدق من DS18B20 (±0.5 °م). لكنه يبقى حرارة جلد، فلا يشخّص الحمى وحده.', en: 'MAX30205: built for body-temperature sensing, ±0.1 °C between 37 and 39 °C — more accurate than the DS18B20 (±0.5 °C). It is still skin temperature, so it cannot diagnose fever on its own.' },
+        why: { ar: 'جانب الصدر تحت الإبط مباشرة: ملاصق للجسم ومحمي بالذراع من هواء المقصورة.', en: 'Side of the chest just below the armpit: against the body and shielded by the arm from cabin air.' },
+    },
+    {
+        id: 'imu', color: '#1fa463', cat: 'body', kind: 'marker', y: 0.845, t: Math.PI,
+        name: { ar: 'حساس الحركة', en: 'Motion sensor' }, short: { ar: 'الحركة', en: 'Motion' },
+        measures: { ar: 'الحركة والنشاط (تسارع ودوران). في انعدام الجاذبية تهمنا كمية الحركة، لا وضعية الجسم.', en: 'Movement and activity (acceleration and rotation). In microgravity what matters is how much you move, not posture.' },
+        mount: { ar: 'مدمج داخل غلاف وحدة التحكم أعلى الظهر؛ لا يحتاج ملامسة الجلد.', en: 'Built into the controller housing on the upper back; no skin contact needed.' },
+        real: { ar: 'BNO055: يحسب الاتجاه داخل الشريحة (تسارع + دوران + مغناطيسية)، أفضل من MPU6050. منه نقدّر النشاط وفترات الراحة وقت النوم — كتقدير فقط، فالأدلة على قياس النوم من الجذع ضعيفة.', en: 'BNO055: computes orientation on the chip (acceleration + rotation + magnetic), better than the MPU6050. It gives activity and rest periods at night — as an estimate only, since evidence for sleep from a chest sensor is weak.' },
+        why: { ar: 'أعلى الظهر ثابت وقريب من مركز الجذع ولا يعيق الذراعين.', en: 'The upper back is stable, close to the trunk’s centre and clear of the arms.' },
+    },
+    {
+        id: 'mcu', color: '#2a3350', cat: 'electronics', kind: 'module', y: 0.79, t: Math.PI, size: [0.092, 0.135, 0.024],
+        name: { ar: 'وحدة التحكم', en: 'Controller' }, short: { ar: 'التحكم', en: 'Controller' },
+        measures: { ar: 'تقرأ كل الحساسات وترسل قراءة كل 5 ثوانٍ إلى OrbitCare في المركبة، وتحتفظ بالقراءات إذا انقطع الاتصال. الشريط الأزرق ضوء الحالة.', en: 'Reads every sensor, sends a reading every 5 s to OrbitCare onboard, and keeps readings if the link drops. The blue bar is its status light.' },
+        mount: { ar: 'في جيب مبطّن على الطبقة الخارجية؛ كل الأسلاك تمر داخل السترة.', en: 'In a padded pocket on the outer layer; every cable runs inside the vest.' },
+        real: { ar: 'ESP32 في غلاف رفيع مقاوم للتعرّق.', en: 'ESP32 in a slim sweat-resistant housing.' },
+        why: { ar: 'منتصف أعلى الظهر: محمية، بعيدة عن حركة الذراعين، وأسلاكها قصيرة لكل الحساسات.', en: 'Upper-back centre: protected, clear of the arms, with short cables to every sensor.' },
+    },
+    {
+        id: 'battery', color: '#4b5675', cat: 'electronics', kind: 'module', y: 0.53, t: Math.PI, size: [0.15, 0.082, 0.02],
+        name: { ar: 'البطارية', en: 'Battery' }, short: { ar: 'البطارية', en: 'Battery' },
+        measures: { ar: 'تشغّل السترة، قابلة للشحن.', en: 'Powers the vest; rechargeable.' },
+        mount: { ar: 'في جيب مبطّن أسفل الظهر، وسلكها إلى وحدة التحكم داخل السترة.', en: 'In a padded pocket on the lower back; its cable to the controller runs inside the vest.' },
+        real: { ar: 'خلية ليثيوم بوليمر مسطحة مع دائرة حماية.', en: 'A flat lithium-polymer cell with a protection circuit.' },
+        why: { ar: 'أثقل قطعة تكون منخفضة وفي الوسط، قريبة من مركز ثقل الجسم.', en: 'The heaviest part sits low and central, close to the body’s centre of mass.' },
+    },
+    {
+        id: 'ui', color: '#e6a01c', cat: 'electronics', kind: 'display', y: 0.55, t: 0.42, size: [0.082, 0.052, 0.014],
+        name: { ar: 'شاشة الحالة والتنبيه', en: 'Status display and alarm' }, short: { ar: 'الشاشة', en: 'Display' },
+        measures: { ar: 'شاشة صغيرة وضوء أخضر/أحمر وجرس — تنبّه لابس السترة حتى بدون شبكة.', en: 'A small screen, green/red lights and a buzzer — warns the wearer even with no network.' },
+        mount: { ar: 'على الطبقة الخارجية أسفل الصدر من الأمام.', en: 'On the outer layer, lower front.' },
+        real: { ar: 'نفس القطع داخل غلاف مرن.', en: 'The same parts in a flexible case.' },
+        why: { ar: 'من الأمام حيث يراها رائد الفضاء بنظرة واحدة.', en: 'At the front, where the astronaut can see it at a glance.' },
+    },
+    {
+        id: 'dose', color: '#c9b11a', cat: 'radiation', kind: 'module', y: 0.835, t: -0.36, size: [0.04, 0.056, 0.012],
+        name: { ar: 'مقياس جرعة الإشعاع الشخصي', en: 'Personal radiation dosimeter' }, short: { ar: 'الإشعاع', en: 'Radiation' },
+        measures: { ar: 'الجرعة الإشعاعية التي يتعرض لها رائد الفضاء، مع وقتها.', en: 'The radiation dose the astronaut receives, with its timing.' },
+        mount: { ar: 'مشبوك على الطبقة الخارجية أعلى الصدر؛ لا يحتاج ملامسة الجلد.', en: 'Clipped to the outer layer on the upper chest; no skin contact needed.' },
+        real: { ar: 'مقياس جرعة نشط مثل Crew Active Dosimeter الذي يلبسه طاقم المحطة منذ 2020. عداد Geiger الهواة لا يصلح: معايرة تحويله إلى mSv مبنية على أشعة غاما على الأرض، وإشعاع الفضاء معظمه بروتونات وأيونات ثقيلة عالية الطاقة.', en: 'An active dosimeter such as the Crew Active Dosimeter worn by ISS crews since 2020. A hobby Geiger counter is not suitable: its mSv conversion is calibrated for gamma rays on Earth, while space radiation is mostly high-energy protons and heavy ions.' },
+        why: { ar: 'على الجذع قرب الأعضاء الحيوية، وهو المكان المعتاد لمقياس الجرعة الشخصي.', en: 'On the trunk, near the vital organs — the usual place for a personal dosimeter.' },
+    },
+    {
+        id: 'bp', color: '#d0507a', cat: 'vitals', kind: 'armcuff',
+        name: { ar: 'سوار ضغط الدم (للذراع)', en: 'Blood pressure cuff (arm)' }, short: { ar: 'الضغط', en: 'Blood pressure' },
+        measures: { ar: 'ضغط الدم الانقباضي والانبساطي، بقراءات متقطعة (مثلًا صباحًا ومساءً).', en: 'Systolic and diastolic blood pressure, as occasional readings (e.g. morning and evening).' },
+        mount: { ar: 'حول أعلى الذراع اليسرى، ينتفخ تلقائيًا للقياس ثم يرتخي.', en: 'Around the upper left arm; inflates automatically for a reading, then relaxes.' },
+        real: { ar: 'جهاز ضغط آلي للذراع بطريقة oscillometric. قياس الضغط بلا كُمّ من السترة نفسها ما زال يحتاج طريقة موثقة.', en: 'An automatic oscillometric upper-arm monitor. Cuffless blood pressure from the vest itself still needs a validated method.' },
+        why: { ar: 'أعلى الذراع هو المكان القياسي لقياس الضغط بالكُمّ.', en: 'The upper arm is the standard site for cuff measurements.' },
+    },
+    {
+        id: 'gsr', color: '#4f8fe0', cat: 'body', kind: 'gsr',
+        name: { ar: 'حساس تعرّق الجلد (GSR)', en: 'Skin conductance (GSR)' }, short: { ar: 'التعرّق', en: 'GSR' },
+        measures: { ar: 'تغيّر توصيل الجلد مع التعرّق — مؤشر على استثارة الجهاز العصبي، وليس «مستوى توتر»: يرتفع أيضًا مع التمرين والحرارة، فيُقرأ مع باقي المؤشرات لا وحده.', en: 'Changes in skin conductance with sweating — a sign of nervous-system arousal, not a "stress level": it also rises with exercise and heat, so it is read together with the other signals, never alone.' },
+        mount: { ar: 'قطبان صغيران داخل عصابة الرأس على جانبي الجبهة، ملامسان للجلد.', en: 'Two small electrodes inside the headband on either side of the forehead, in skin contact.' },
+        real: { ar: 'وحدة GSR بقطبين.', en: 'A two-electrode GSR module.' },
+        why: { ar: 'الجبهة غنية بالغدد العرقية ومتاحة في العصابة؛ الكفّان أقوى استجابة لكنهما يعيقان العمل.', en: 'The forehead has many sweat glands and the headband is already there; palms respond more strongly but get in the way of work.' },
+    },
+    {
+        id: 'emg', color: '#8c6d4f', cat: 'body', kind: 'thighstrap',
+        name: { ar: 'حساس نشاط العضلات (EMG)', en: 'Muscle activity (EMG)' }, short: { ar: 'العضلات', en: 'EMG' },
+        measures: { ar: 'انقباض عضلة الفخذ أثناء تمارين المقاومة، فيميّز التمرين الفعلي عن الحركة العادية. والتمرين هو الحماية الأساسية للعضلات والعظام في انعدام الجاذبية.', en: 'Thigh muscle contraction during resistance exercise, telling real exercise from ordinary movement. Exercise is the main protection for muscle and bone in microgravity.' },
+        mount: { ar: 'شريط على الفخذ أثناء جلسة التمرين فقط، والأقطاب على الجلد تحته.', en: 'A strap on the thigh during exercise sessions only, with the electrodes on the skin underneath.' },
+        real: { ar: 'MyoWare EMG.', en: 'MyoWare EMG.' },
+        why: { ar: 'عضلة الفخذ الأمامية من أكبر العضلات العاملة في تمارين المقاومة.', en: 'The front thigh muscle is one of the main muscles working in resistance exercise.' },
+    },
+];
+
+// Periodic checks with station or ground equipment (not worn), on a fixed schedule.
+const PERIODIC = [
+    {
+        name: { ar: 'فحص كثافة العظم بالموجات الصوتية', en: 'Bone density check (ultrasound)' },
+        when: { ar: 'كل أسبوعين إلى شهر', en: 'Every 2–4 weeks' },
+        device: { ar: 'جهاز محمول مثل Bindex في حقيبة المعدات الطبية — يوضع على عظمة الساق مع جل، ويقدّر كثافة عظم الورك. تُقارَن النتيجة بفحص الأشعة قبل الرحلة وبكمية تمارين المقاومة.', en: 'A handheld device such as Bindex from the medical kit — placed on the shin with gel; it estimates hip bone density. Results are compared with the pre-flight X-ray scan and with the amount of resistance exercise.' },
+        note: { ar: 'العظم يتغير قرابة 1% بالشهر في الورك والعمود الفقري، فالفحص المتباعد كافٍ. تقدير وفحص أولي، وليس تشخيصًا؛ لم نجد دراسة جرّبت هذا الجهاز في الفضاء.', en: 'Bone changes about 1 % a month at the hip and spine, so spaced checks are enough. A screening estimate, not a diagnosis; we found no study of this device in space.' },
+    },
+    {
+        name: { ar: 'فحص الأشعة لكثافة العظم (DXA)', en: 'X-ray bone density scan (DXA)' },
+        when: { ar: 'قبل الرحلة وبعدها — على الأرض', en: 'Before and after the flight — on Earth' },
+        device: { ar: 'جهاز الأشعة المرجعي بجرعة منخفضة جدًا، وهو ما تستخدمه NASA قبل الرحلة وبعدها. نتيجته نقطة المقارنة لكل فحوص المهمة.', en: 'The reference very-low-dose X-ray scanner, which NASA uses before and after flight. Its result is the baseline for every check during the mission.' },
+        note: { ar: 'هذا هو المعيار الذهبي؛ لا يصغر ليُلبس لأنه يحتاج مصدر أشعة ولاقطًا على جهتي العظمة.', en: 'This is the gold standard; it cannot be made wearable — it needs an X-ray source and a detector on both sides of the bone.' },
+    },
+];
+
+// Research directions: promising on Earth, not yet tested in space.
+const FUTURE = [
+    {
+        name: { ar: 'عصابة النوم: موجات الدماغ وأصوات في توقيتها', en: 'Sleep headband: brain waves and timed sounds' },
+        when: { ar: 'أثناء النوم فقط', en: 'During sleep only' },
+        device: { ar: 'عصابة EEG جافة (بدون جل) تُلبس للنوم فقط، من نوع عصابة تجربة DREAMS التي استُخدمت على محطة الفضاء لقياس النوم (2021 و2023). تقيس مراحل النوم، وعندما تلتقط الموجة البطيئة للنوم العميق تُصدر صوتًا قصيرًا جدًا (نحو 50 جزءًا من الثانية) في لحظتها بالضبط، لدعم النوم العميق.', en: 'A dry EEG headband (no gel) worn only for sleep, of the kind used in the DREAMS experiment to measure sleep on the space station (2021 and 2023). It tracks sleep stages and, when it detects a deep-sleep slow wave, plays a very short sound (about 50 ms) exactly in time with it to support deep sleep.' },
+        note: { ar: 'في دراسة على الأرض زاد نشاط النوم العميق نحو 16% عند الشباب، ولم يتغير عند الأكبر سنًا. وفي دراسة أخرى قلّلت أصوات أثناء النوم النوم العميق 30%؛ لذلك لا تُشغَّل الأصوات دون قياس الدماغ. لم تُجرَّب هذه الأصوات في الفضاء بعد.', en: 'In an Earth study, deep-sleep activity rose about 16 % in young adults and did not change in older adults. In another study, sounds during sleep cut deep sleep by 30 % — so the sounds are never played without measuring the brain. These sounds have not yet been tested in space.' },
+    },
+];
+
+const OFF_BODY = [
+    { name: { ar: 'ثاني أكسيد الكربون', en: 'CO₂' }, text: { ar: 'يقيسه حساس في المقصورة وليس على الجسم، لأنه صفة لهواء المركبة لا لجسم رائد الفضاء.', en: 'Measured by a cabin sensor, not on the body — it describes the spacecraft’s air, not the astronaut’s body.' } },
+    { name: { ar: 'استبعدناها ولماذا', en: 'Left out, and why' }, text: {
+        ar: 'قياس كثافة العظم داخل السترة (الأشعة تحتاج مصدرًا ولاقطًا على جهتي العظمة، وحمل جهاز طوال الوقت لفحص شهري يثقل السترة؛ لذلك صار فحصًا دوريًا خارجها) · حساس الضغط في الحذاء (لا وقوف ولا استلقاء في انعدام الجاذبية) · عدّاد الخطوات (لا مشي في المدار؛ يفيد على سطح القمر أو المريخ فقط) · EEG أثناء العمل (إشارة ضعيفة مع الحركة، وفحص اليقظة PVT والعيون أقوى وموثّقان؛ أما EEG للنوم ففي «بحث مستقبلي») · حساسات الترطيب والعرق (ما زالت بحثية) · أجهزة العناية المركزة: تخطيط CO₂ بالزفير (يحتاج أنبوبًا في الأنف)، IBP (يُدخَل في الشريان)، BIS (للتخدير في العمليات) — لا تُلبس.',
+        en: 'Bone density inside the vest (X-ray needs a source and a detector on both sides of the bone, and carrying a device all day for a monthly check weighs the vest down; so it became a periodic check outside it) · Shoe pressure sensor (no standing or lying in microgravity) · step counting (no walking in orbit; useful only on the Moon or Mars) · EEG during work (a weak signal while moving; the PVT and eye checks are stronger and validated — sleep EEG is under "Future research") · hydration/sweat sensors (still research) · ICU equipment: exhaled-CO₂ capnography (needs a nasal tube), IBP (inserted into an artery), BIS (anaesthesia during surgery) — not wearable.' } },
+];
+
+const SOURCES = [
+    ['https://www.csa-asc.gc.ca/eng/sciences/astroskin.asp', { ar: 'وكالة الفضاء الكندية — Bio-Monitor (Astroskin)', en: 'Canadian Space Agency — Bio-Monitor (Astroskin)' }],
+    ['https://ntrs.nasa.gov/citations/20190001996', { ar: 'NASA NTRS — تقييم Astroskin في دراسة HERA', en: 'NASA NTRS — Astroskin evaluation in HERA' }],
+    ['https://spiral.imperial.ac.uk/entities/publication/1d74d351-8d9a-4494-930a-ec04dfb6e3cd', { ar: 'قياس الأكسجين من الرقبة — دراسة إثبات مفهوم', en: 'Pulse oximetry in the neck — proof of concept' }],
+    ['https://read.qxmd.com/read/37945094/the-importance-of-time-resolved-personal-dosimetry-in-space-the-iss-crew-active-dosimeter', { ar: 'مقياس الجرعة النشط لطاقم المحطة (2023)', en: 'ISS Crew Active Dosimeter (2023)' }],
+    ['https://pubmed.ncbi.nlm.nih.gov/15125798/', { ar: 'خسارة العظم في الورك والعمود الفقري في المهمات الطويلة (2004)', en: 'Hip and spine bone loss in long-duration flight (2004)' }],
+    ['https://fda.innolitics.com/device/K161971', { ar: 'موافقة هيئة الغذاء والدواء على Bindex', en: 'FDA clearance of Bindex' }],
+    ['https://www.mediaoffice.ae/en/news/2023/july/16-07/sultan-alneyadi-successfully-executes-dreams', { ar: 'تجربة DREAMS لقياس النوم على المحطة (2023)', en: 'DREAMS sleep experiment on the ISS (2023)' }],
+    ['https://pubmed.ncbi.nlm.nih.gov/30215604/', { ar: 'أصوات في توقيت الموجات البطيئة تزيد النوم العميق (2018)', en: 'Sounds timed to slow waves boost deep sleep (2018)' }],
+    ['https://www.physiologie.unibe.ch/PublicationPDF/Fehér2023Feasibilit.pdf', { ar: 'أصوات أثناء النوم تقلّل النوم العميق 30% (2023)', en: 'Sounds during sleep cut deep sleep by 30 % (2023)' }],
+    ['https://pubmed.ncbi.nlm.nih.gov/37660843/', { ar: 'التحفيز الصوتي للنوم: الأسس وأفضل الممارسات (2023)', en: 'Closed-loop auditory sleep stimulation: principles and best practices (2023)' }],
+];
+
+// ================================================================ state
+// ?still → no auto-rotation; ?angle=<degrees> → start from that side (0 = front, 180 = back); ?xray → start in X-ray.
+// From the OrbitCare dashboard: ?sensor=<id> opens that sensor, ?lang=ar|en, ?astronaut_id= (mission admins).
+const params = new URLSearchParams(location.search);
+const saved = (() => { try { return localStorage.getItem('orbitcare-vest-lang'); } catch { return null; } })();
+let lang = (['ar', 'en'].includes(params.get('lang')) ? params.get('lang') : saved) === 'en' ? 'en' : 'ar';
+let selected = 'ecg';
+let xray = false;
+const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+// ================================================================ renderer, studio light
+const stage = document.querySelector('[data-stage]');
+const canvas = document.querySelector('[data-canvas]');
+// preserveDrawingBuffer: screenshots of the page (slides, demo video) always capture the model.
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true, preserveDrawingBuffer: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 0.95;
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+const scene = new THREE.Scene();
+scene.environment = new THREE.PMREMGenerator(renderer).fromScene(new RoomEnvironment(), 0.04).texture;
+
+const key = new THREE.DirectionalLight(0xffffff, 1.6);
+key.position.set(1.8, 3.2, 2.6);
+key.castShadow = true;
+key.shadow.mapSize.set(2048, 2048);
+Object.assign(key.shadow.camera, { left: -1.4, right: 1.4, top: 1.8, bottom: -1.2, near: 0.5, far: 9 });
+key.shadow.bias = -0.0004; key.shadow.normalBias = 0.02;
+scene.add(key);
+const rim = new THREE.DirectionalLight(0xd8e2ff, 0.9); rim.position.set(-2.4, 2.2, -2.8); scene.add(rim);
+scene.add(new THREE.HemisphereLight(0xffffff, 0x9aa1b2, 0.55));
+const fill = new THREE.DirectionalLight(0xeef2ff, 0.45); fill.position.set(-2.6, 1.2, 1.8); scene.add(fill);
+
+const camera = new THREE.PerspectiveCamera(28, 1, 0.1, 60);
+const startAngle = THREE.MathUtils.degToRad(Number(params.get('angle')) || 0);
+const TARGET = new THREE.Vector3(0, 0.26, 0);
+const HOME = new THREE.Vector3(Math.sin(startAngle) * 5.6, 0.62, Math.cos(startAngle) * 5.6);
+camera.position.copy(HOME);
+const controls = new OrbitControls(camera, canvas);
+controls.target.copy(TARGET);
+controls.enablePan = false;
+controls.enableDamping = true;
+controls.minDistance = 1.2;
+controls.maxDistance = 8;
+controls.minPolarAngle = 0.3;
+controls.maxPolarAngle = 1.95;
+controls.autoRotate = !reduceMotion && !params.has('still');
+controls.autoRotateSpeed = 1.1;
+
+// ================================================================ procedural textures (fabric weave, breathable mesh)
+function canvasTexture(size, draw, repeat) {
+    const c = document.createElement('canvas'); c.width = c.height = size;
+    draw(c.getContext('2d'), size);
+    const tex = new THREE.CanvasTexture(c);
+    tex.wrapS = tex.wrapT = THREE.RepeatWrapping; tex.repeat.set(...repeat);
+    tex.anisotropy = 8;
+    return tex;
+}
+const weave = canvasTexture(256, (g, s) => {
+    g.fillStyle = '#808080'; g.fillRect(0, 0, s, s);
+    for (let y = 0; y < s; y += 4) for (let x = 0; x < s; x += 4) {
+        const over = ((x + y) / 4) % 2 === 0;
+        g.fillStyle = over ? '#9a9a9a' : '#6a6a6a'; g.fillRect(x, y, 4, 2);
+        g.fillStyle = over ? '#727272' : '#929292'; g.fillRect(x, y + 2, 4, 2);
+    }
+}, [70, 40]);
+const meshHoles = canvasTexture(256, (g, s) => {
+    g.fillStyle = '#b0b0b0'; g.fillRect(0, 0, s, s);
+    g.fillStyle = '#202020';
+    const r = 9, dx = 26, dy = 22;
+    for (let row = -1, y = 0; y < s + dy; row++, y += dy) for (let x = (row % 2) * dx / 2; x < s + dx; x += dx) {
+        g.beginPath();
+        for (let k = 0; k < 6; k++) { const a = Math.PI / 6 + k * Math.PI / 3; g.lineTo(x + r * Math.cos(a), y + r * Math.sin(a)); }
+        g.closePath(); g.fill();
+    }
+}, [30, 18]);
+const knit = canvasTexture(128, (g, s) => {
+    g.fillStyle = '#808080'; g.fillRect(0, 0, s, s);
+    for (let x = 0; x < s; x += 3) { g.fillStyle = x % 6 ? '#8c8c8c' : '#747474'; g.fillRect(x, 0, 1, s); }
+}, [60, 60]);
+
+// ================================================================ materials
+const M = {
+    mannequin: new THREE.MeshPhysicalMaterial({ color: 0xf1f2f4, roughness: 0.38, clearcoat: 0.25, clearcoatRoughness: 0.45 }),
+    baseLayer: new THREE.MeshStandardMaterial({ color: 0xe6e8ec, roughness: 0.92, bumpMap: knit, bumpScale: 0.6 }),
+    vest: new THREE.MeshPhysicalMaterial({ color: 0x1c1d21, roughness: 0.88, sheen: 0.55, sheenColor: new THREE.Color(0x4c5262), sheenRoughness: 0.7, bumpMap: weave, bumpScale: 0.9, side: THREE.DoubleSide }),
+    vestMesh: new THREE.MeshPhysicalMaterial({ color: 0x24262c, roughness: 0.8, sheen: 0.4, sheenColor: new THREE.Color(0x3c4050), bumpMap: meshHoles, bumpScale: 2.2, side: THREE.DoubleSide }),
+    binding: new THREE.MeshStandardMaterial({ color: 0x2b2d33, roughness: 0.62 }),
+    trim: new THREE.MeshStandardMaterial({ color: 0x2b2d33, roughness: 0.62 }),   // same look, but not part of the vest (stays solid in X-ray)
+    seam: new THREE.MeshStandardMaterial({ color: 0x3a3d45, roughness: 0.7 }),
+    webbing: new THREE.MeshStandardMaterial({ color: 0x17181c, roughness: 0.75, bumpMap: knit, bumpScale: 0.8 }),
+    polymer: new THREE.MeshPhysicalMaterial({ color: 0x2a2c32, roughness: 0.34, metalness: 0.1, clearcoat: 0.6, clearcoatRoughness: 0.3 }),
+    metal: new THREE.MeshStandardMaterial({ color: 0x9aa0aa, roughness: 0.28, metalness: 0.9 }),
+    electrode: new THREE.MeshStandardMaterial({ color: 0xb4b9c2, roughness: 0.42, metalness: 0.75 }),
+    band: new THREE.MeshStandardMaterial({ color: 0x33363e, roughness: 0.85, bumpMap: knit, bumpScale: 0.6, side: THREE.DoubleSide }),
+    wire: new THREE.MeshStandardMaterial({ color: 0x8d93a3, roughness: 0.5, metalness: 0.2 }),
+    glow: new THREE.MeshBasicMaterial({ color: 0x4aa3ff }),
+    glass: new THREE.MeshPhysicalMaterial({ color: 0x0c0e12, roughness: 0.08, metalness: 0, clearcoat: 1 }),
+};
+const VEST_LAYER = [M.vest, M.vestMesh, M.binding, M.seam, M.webbing];
+
+// ================================================================ body sculpt
+// Torso cross-sections: superellipse rings (half width a, half depth b, roundness n) by world height y.
+const RINGS = [
+    [0.1, 0.13, 0.11, 2.1], [0.17, 0.215, 0.14, 2.3], [0.26, 0.24, 0.145, 2.4], [0.36, 0.24, 0.142, 2.35],
+    [0.44, 0.232, 0.138, 2.3], [0.52, 0.24, 0.142, 2.35], [0.6, 0.258, 0.15, 2.45], [0.68, 0.275, 0.158, 2.55],
+    [0.75, 0.288, 0.16, 2.65], [0.81, 0.298, 0.155, 2.75], [0.86, 0.305, 0.142, 2.85], [0.9, 0.285, 0.124, 2.7],
+    [0.93, 0.235, 0.108, 2.4], [0.955, 0.16, 0.092, 2.15], [0.975, 0.085, 0.07, 2.0],
+];
+// Catmull-Rom through the ring table → smooth body without creases.
+function ringAt(y) {
+    const i = Math.max(1, Math.min(RINGS.length - 2, RINGS.findIndex((r) => r[0] >= y)));
+    const p0 = RINGS[Math.max(0, i - 2)], p1 = RINGS[i - 1], p2 = RINGS[i], p3 = RINGS[Math.min(RINGS.length - 1, i + 1)];
+    const f = THREE.MathUtils.clamp((y - p1[0]) / (p2[0] - p1[0]), 0, 1);
+    const cr = (a, b, c, d) => 0.5 * (2 * b + (-a + c) * f + (2 * a - 5 * b + 4 * c - d) * f * f + (-a + 3 * b - 3 * c + d) * f * f * f);
+    return [cr(p0[1], p1[1], p2[1], p3[1]), cr(p0[2], p1[2], p2[2], p3[2]), cr(p0[3], p1[3], p2[3], p3[3])];
+}
+function superPoint(a, b, n, t) {
+    const s = Math.sin(t), c = Math.cos(t);
+    return [a * Math.sign(s) * Math.abs(s) ** (2 / n), b * Math.sign(c) * Math.abs(c) ** (2 / n)];
+}
+function surfaceNormal(y, t) {
+    const [a, b, n] = ringAt(y);
+    const [x, z] = superPoint(a, b, n, t);
+    const nx = (n / a) * Math.sign(x) * Math.abs(x / a) ** (n - 1), nz = (n / b) * Math.sign(z) * Math.abs(z / b) ** (n - 1);
+    return new THREE.Vector3(nx, 0, nz).normalize();
+}
+function surfacePoint(y, t, off = 0) {
+    const [a, b, n] = ringAt(y);
+    const [x, z] = superPoint(a, b, n, t);
+    return new THREE.Vector3(x, y, z).addScaledVector(surfaceNormal(y, t), off);
+}
+// A surface following the torso between two heights, with an offset and a face filter (material per face).
+function torsoSurface(y0, y1, off, faceMaterial, stepsY = 90, stepsT = 160) {
+    const pos = [], uv = [];
+    for (let iy = 0; iy <= stepsY; iy++) {
+        const y = y0 + (y1 - y0) * iy / stepsY;
+        for (let it = 0; it <= stepsT; it++) {
+            const t = -Math.PI + 2 * Math.PI * it / stepsT;
+            const p = surfacePoint(y, t, off);
+            pos.push(p.x, p.y, p.z); uv.push(it / stepsT, (y - y0) / (y1 - y0));
+        }
+    }
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    geo.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+    const groups = {};
+    const row = stepsT + 1;
+    for (let iy = 0; iy < stepsY; iy++) for (let it = 0; it < stepsT; it++) {
+        const y = y0 + (y1 - y0) * (iy + 0.5) / stepsY, t = -Math.PI + 2 * Math.PI * (it + 0.5) / stepsT;
+        const m = faceMaterial(y, t);
+        if (m < 0) continue;
+        const a = iy * row + it, b = a + 1, c = a + row, d = c + 1;
+        (groups[m] ??= []).push(a, c, b, b, c, d);
+    }
+    const index = [];
+    for (const [m, list] of Object.entries(groups)) {
+        geo.addGroup(index.length, list.length, Number(m));
+        for (const v of list) index.push(v);   // (not push(...list): ~100k arguments overflows the call stack)
+    }
+    geo.setIndex(index);
+    geo.computeVertexNormals();
+    return geo;
+}
+// Lathe profiles must run bottom → top, or the surface is built inside-out (faces pointing inwards).
+const latheMesh = (points, material, segments = 64) => new THREE.Mesh(new THREE.LatheGeometry(
+    points.slice().sort((p, q) => p[1] - q[1]).map(([r, y]) => new THREE.Vector2(r, y)), segments), material);
+const tube = (points, radius, material, closed = false) => new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(points, closed), Math.max(24, points.length * 3), radius, 10, closed), material);
+function curveOnTorso(from, to, off, steps = 48) {
+    const pts = [];
+    for (let i = 0; i <= steps; i++) {
+        const f = i / steps;
+        pts.push(surfacePoint(from.y + (to.y - from.y) * f, from.t + (to.t - from.t) * f, off));
+    }
+    return pts;
+}
+// Lays a part flat on the surface (its local Y = the surface normal) with its width kept horizontal.
+function orient(mesh, normal) {
+    const across = new THREE.Vector3(0, 1, 0).cross(normal).normalize();
+    const down = new THREE.Vector3().crossVectors(across, normal);
+    mesh.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(across, normal, down));
+}
+// Bevelled rounded-rectangle housing (width x height, thickness), lying in XZ with thickness along +Y.
+function housing(w, h, d, radius = 0.01, bevel = 0.0025) {
+    const s = new THREE.Shape();
+    const x = -w / 2, y = -h / 2, r = Math.min(radius, w / 2, h / 2);
+    s.moveTo(x + r, y); s.lineTo(x + w - r, y); s.quadraticCurveTo(x + w, y, x + w, y + r);
+    s.lineTo(x + w, y + h - r); s.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+    s.lineTo(x + r, y + h); s.quadraticCurveTo(x, y + h, x, y + h - r);
+    s.lineTo(x, y + r); s.quadraticCurveTo(x, y, x + r, y);
+    const geo = new THREE.ExtrudeGeometry(s, { depth: Math.max(0.001, d - 2 * bevel), bevelEnabled: true, bevelThickness: bevel, bevelSize: bevel, bevelSegments: 3, curveSegments: 10 });
+    geo.translate(0, 0, -(d - 2 * bevel) / 2);
+    geo.rotateX(-Math.PI / 2);   // thickness → +Y (the surface normal after orient())
+    return geo;
+}
+
+const body = new THREE.Group();
+scene.add(body);
+
+// --- base layer top (white) on the sculpted torso
+const torso = new THREE.Mesh(torsoSurface(0.1, 0.975, 0, () => 0, 100, 160), M.baseLayer);
+body.add(torso);
+// collar, neck, head (egg-shaped, featureless)
+body.add(latheMesh([[0.088, 0.945], [0.084, 0.99], [0.075, 1.03], [0.072, 1.035]], M.baseLayer));
+body.add(latheMesh([[0.064, 1.0], [0.06, 1.06], [0.058, 1.1], [0.062, 1.13]], M.mannequin));
+const head = latheMesh([[0, 1.088], [0.045, 1.092], [0.078, 1.11], [0.098, 1.145], [0.11, 1.19], [0.116, 1.24], [0.114, 1.29], [0.103, 1.335], [0.078, 1.37], [0.04, 1.39], [0, 1.394]], M.mannequin, 72);
+head.scale.z = 1.12; body.add(head);
+const HEAD_AT = (y) => {   // head radius (x) at a height, for the headband
+    const p = [[1.088, 0], [1.092, 0.045], [1.11, 0.078], [1.145, 0.098], [1.19, 0.11], [1.24, 0.116], [1.29, 0.114], [1.335, 0.103], [1.37, 0.078], [1.39, 0.04]];
+    for (let i = 1; i < p.length; i++) if (y <= p[i][0]) return p[i - 1][1] + (p[i][1] - p[i - 1][1]) * (y - p[i - 1][0]) / (p[i][0] - p[i - 1][0]);
+    return 0.04;
+};
+
+// --- arms (base-layer sleeves) and hands; limbs.armLeft / limbs.legRight carry the cuff and the EMG strap
+const limbs = {};
+for (const side of [-1, 1]) {
+    const arm = new THREE.Group();
+    arm.position.set(side * 0.318, 0.848, 0);
+    arm.rotation.z = side * 0.075;
+    // one continuous sleeve from shoulder to wrist (no ball joints), with a rounded shoulder cap
+    const cap = new THREE.Mesh(new THREE.SphereGeometry(1, 40, 24), M.baseLayer);
+    cap.scale.set(0.066, 0.072, 0.066); arm.add(cap);
+    arm.add(latheMesh([[0.066, 0.0], [0.066, -0.03], [0.064, -0.1], [0.057, -0.2], [0.05, -0.3], [0.047, -0.34], [0.05, -0.39], [0.046, -0.48], [0.039, -0.57], [0.037, -0.6]], M.baseLayer, 48));
+    arm.add(latheMesh([[0.039, -0.585], [0.0405, -0.6], [0.0395, -0.612]], M.trim, 32));
+    const hand = new THREE.Mesh(new THREE.SphereGeometry(1, 28, 20), M.mannequin);
+    hand.scale.set(0.031, 0.082, 0.048); hand.position.set(0, -0.68, 0); arm.add(hand);
+    const thumb = new THREE.Mesh(new THREE.CapsuleGeometry(0.011, 0.032, 6, 12), M.mannequin);
+    thumb.position.set(0, -0.652, 0.042); thumb.rotation.x = 0.5; arm.add(thumb);
+    body.add(arm);
+    if (side === 1) limbs.armLeft = arm;   // the wearer's left (+x)
+
+    // --- legs (base-layer trousers) and shoes
+    const leg = new THREE.Group();
+    leg.position.set(side * 0.108, 0.14, 0);
+    // one continuous trouser leg from hip to ankle (no ball joints)
+    leg.add(latheMesh([[0.1, 0.09], [0.112, 0.03], [0.109, -0.06], [0.099, -0.18], [0.085, -0.32], [0.069, -0.44], [0.065, -0.5], [0.069, -0.58], [0.064, -0.68], [0.05, -0.8], [0.044, -0.9], [0.046, -0.93]], M.baseLayer, 56));
+    const kneePanel = new THREE.Mesh(housing(0.07, 0.085, 0.008, 0.025, 0.002), M.baseLayer);
+    kneePanel.position.set(0, -0.47, 0.06); orient(kneePanel, new THREE.Vector3(0, 0, 1)); leg.add(kneePanel);
+    const shoe = new THREE.Mesh(housing(0.09, 0.24, 0.07, 0.04, 0.012), new THREE.MeshPhysicalMaterial({ color: 0xf4f5f7, roughness: 0.55, clearcoat: 0.2 }));
+    shoe.rotation.set(0, 0, 0); shoe.position.set(0, -0.995, 0.045); leg.add(shoe);
+    const sole = new THREE.Mesh(housing(0.094, 0.245, 0.018, 0.04, 0.004), new THREE.MeshStandardMaterial({ color: 0xd9dce2, roughness: 0.7 }));
+    sole.position.set(0, -1.033, 0.045); leg.add(sole);
+    body.add(leg);
+    if (side === -1) limbs.legRight = leg;
+}
+
+// ================================================================ the vest
+const VEST_OFF = 0.018;
+const VEST_BOTTOM = 0.4, VEST_TOP = 0.952, ARM_BOTTOM = 0.745, ARM_TOP = 0.912;
+const isArmhole = (y, t) => y > ARM_BOTTOM && y < ARM_TOP && Math.abs(Math.sin(t)) > 0.8;
+const isSidePanel = (y, t) => y <= ARM_BOTTOM && Math.abs(Math.sin(t)) > 0.8;
+// material index: 0 = technical fabric, 1 = breathable mesh side panels, -1 = armhole (no fabric)
+const vest = new THREE.Mesh(torsoSurface(VEST_BOTTOM, VEST_TOP, VEST_OFF, (y, t) => (isArmhole(y, t) ? -1 : isSidePanel(y, t) ? 1 : 0), 90, 180), [M.vest, M.vestMesh]);
+vest.castShadow = true;
+body.add(vest);
+
+// edge binding: hem, neckline, armholes
+body.add(tube(Array.from({ length: 97 }, (_, i) => surfacePoint(VEST_BOTTOM + 0.004, -Math.PI + i * 2 * Math.PI / 96, VEST_OFF + 0.002)), 0.0075, M.binding, true));
+body.add(tube(Array.from({ length: 97 }, (_, i) => surfacePoint(VEST_TOP - 0.003, -Math.PI + i * 2 * Math.PI / 96, VEST_OFF + 0.002)), 0.007, M.binding, true));
+for (const side of [-1, 1]) {
+    const tf = Math.asin(0.8), tb = Math.PI - tf;   // front / back edges of the armhole
+    const pts = [
+        ...curveOnTorso({ y: ARM_BOTTOM, t: side * tf }, { y: ARM_TOP, t: side * tf }, VEST_OFF + 0.002, 14),
+        ...curveOnTorso({ y: ARM_TOP, t: side * tf }, { y: ARM_TOP, t: side * tb }, VEST_OFF + 0.002, 14).slice(1),
+        ...curveOnTorso({ y: ARM_TOP, t: side * tb }, { y: ARM_BOTTOM, t: side * tb }, VEST_OFF + 0.002, 14).slice(1),
+        ...curveOnTorso({ y: ARM_BOTTOM, t: side * tb }, { y: ARM_BOTTOM, t: side * tf }, VEST_OFF + 0.002, 14).slice(1, -1),
+    ];
+    body.add(tube(pts, 0.0075, M.binding, true));
+    // seams: front and back panel lines, and the mesh-panel joins
+    for (const t of [side * 0.5, side * (Math.PI - 0.5)]) body.add(tube(curveOnTorso({ y: VEST_BOTTOM + 0.01, t }, { y: 0.93, t: t * 0.92 }, VEST_OFF + 0.0015, 30), 0.0017, M.seam));
+    for (const t of [side * tf, side * tb]) body.add(tube(curveOnTorso({ y: VEST_BOTTOM + 0.01, t }, { y: ARM_BOTTOM, t }, VEST_OFF + 0.0015, 16), 0.0017, M.seam));
+    // adjustable side straps with buckles, across the mesh panel
+    for (const y of [0.5, 0.63]) {
+        body.add(tube(curveOnTorso({ y, t: side * 1.0 }, { y, t: side * 2.14 }, VEST_OFF + 0.007, 16), 0.009, M.webbing));
+        const buckle = new THREE.Mesh(housing(0.032, 0.03, 0.01, 0.005, 0.0015), M.polymer);
+        buckle.position.copy(surfacePoint(y, side * 1.55, VEST_OFF + 0.016)); orient(buckle, surfaceNormal(y, side * 1.55)); body.add(buckle);
+    }
+    // subtle blue status light pipes on the front side panels
+    body.add(tube(curveOnTorso({ y: 0.62, t: side * 0.66 }, { y: 0.7, t: side * 0.6 }, VEST_OFF + 0.003, 8), 0.0028, M.glow));
+}
+// yoke seam across the chest and back
+for (const t0 of [-0.88, Math.PI - 0.88]) body.add(tube(curveOnTorso({ y: 0.875, t: t0 }, { y: 0.875, t: t0 + 1.76 }, VEST_OFF + 0.0015, 30), 0.0017, M.seam));
+// zipper: tape, teeth, puller
+body.add(tube(curveOnTorso({ y: VEST_BOTTOM + 0.006, t: 0 }, { y: VEST_TOP - 0.006, t: 0 }, VEST_OFF + 0.003, 30), 0.0042, M.binding));
+body.add(tube(curveOnTorso({ y: VEST_BOTTOM + 0.006, t: 0 }, { y: VEST_TOP - 0.006, t: 0 }, VEST_OFF + 0.0055, 30), 0.0022, M.metal));
+const puller = new THREE.Mesh(housing(0.014, 0.03, 0.004, 0.004, 0.001), M.metal);
+puller.position.copy(surfacePoint(0.915, 0, VEST_OFF + 0.009)); orient(puller, surfaceNormal(0.915, 0)); body.add(puller);
+// OrbitCare mark (embroidery tone) on the wearer's left chest
+const logoTex = (() => {
+    const c = document.createElement('canvas'); c.width = 512; c.height = 128;
+    const g = c.getContext('2d');
+    g.strokeStyle = 'rgba(205,210,222,0.95)'; g.lineWidth = 6;
+    g.beginPath(); g.ellipse(64, 64, 46, 18, -0.45, 0, Math.PI * 2); g.stroke();
+    g.beginPath(); g.arc(64, 64, 17, 0, Math.PI * 2); g.stroke();
+    g.fillStyle = 'rgba(205,210,222,0.95)'; g.font = '500 58px Lexend, sans-serif'; g.textBaseline = 'middle';
+    g.fillText('OrbitCare', 124, 68);
+    const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 8; return tex;
+})();
+const logo = new THREE.Mesh(new THREE.PlaneGeometry(0.11, 0.0275), new THREE.MeshStandardMaterial({ map: logoTex, transparent: true, roughness: 0.7 }));
+logo.position.copy(surfacePoint(0.855, 0.42, VEST_OFF + 0.002)); logo.lookAt(logo.position.clone().add(surfaceNormal(0.855, 0.42)));
+VEST_LAYER.push(logo.material); body.add(logo);
+
+// ground: soft contact shadow
+const ground = new THREE.Mesh(new THREE.PlaneGeometry(6, 6), new THREE.ShadowMaterial({ opacity: 0.2 }));
+ground.rotation.x = -Math.PI / 2; ground.position.y = -0.903; ground.receiveShadow = true; scene.add(ground);
+body.traverse((o) => { if (o.isMesh) o.castShadow = true; });
+
+// ================================================================ sensors
+const pickables = [];
+const anchors = {};
+const meshesBySensor = {};
+const insideParts = [];
+const LABEL_OFF = VEST_OFF + 0.05;
+
+// Each sensor gets its own materials, so selecting one lights only it (in its legend colour).
+function own(material) { return material.clone(); }
+function register(s, mesh, parent = body) {
+    mesh.userData.sensor = s.id;
+    pickables.push(mesh);
+    (meshesBySensor[s.id] ??= []).push(mesh);
+    if (s.inside) insideParts.push(mesh);
+    parent.add(mesh);
+}
+// A strap around a limb (arm or leg group, in its local frame) with a small housing on its outer face.
+function limbStrap(s, limb, y, radius, height, outward, housingSize) {
+    const strap = new THREE.Mesh(new THREE.CylinderGeometry(radius, radius, height, 48, 1, true), own(M.webbing));
+    strap.material.side = THREE.DoubleSide; strap.position.y = y; register(s, strap, limb);
+    const [w, h, d] = housingSize;
+    const box = new THREE.Mesh(housing(w, h, d, 0.008, 0.002), own(M.polymer));
+    box.position.copy(outward.clone().multiplyScalar(radius + d / 2)).setY(y); orient(box, outward); register(s, box, limb);
+    limb.updateMatrixWorld(true);
+    const point = limb.localToWorld(outward.clone().multiplyScalar(radius + 0.05).setY(y + 0.03));
+    const normal = outward.clone().applyQuaternion(limb.getWorldQuaternion(new THREE.Quaternion())).normalize();
+    return { point, normal, box };
+}
+
+for (const s of SENSORS) {
+    if (s.kind === 'electrodes') {
+        s.points.forEach((p, i) => {
+            const n = surfaceNormal(p.y, p.t);
+            const pad = new THREE.Mesh(housing(0.046, 0.046, 0.004, 0.012, 0.0012), own(M.electrode));
+            pad.position.copy(surfacePoint(p.y, p.t, 0.003)); orient(pad, n); register(s, pad);
+            const snap = new THREE.Mesh(new THREE.CylinderGeometry(0.0075, 0.0075, 0.006, 20), M.metal);
+            snap.position.copy(surfacePoint(p.y, p.t, 0.007)); orient(snap, n); insideParts.push(snap); body.add(snap);
+            if (i === 0) anchors[s.id] = { point: surfacePoint(p.y, p.t, LABEL_OFF), normal: n };
+        });
+    } else if (s.kind === 'band') {
+        const band = new THREE.Mesh(torsoSurface(s.y - 0.017, s.y + 0.017, 0.007, () => 0, 4, 160), own(M.band));
+        register(s, band);
+        const module = new THREE.Mesh(housing(0.05, 0.028, 0.008, 0.006, 0.0015), own(M.polymer));
+        module.position.copy(surfacePoint(s.y, -0.9, 0.013)); orient(module, surfaceNormal(s.y, -0.9)); register(s, module);
+        anchors[s.id] = { point: surfacePoint(s.y, -1.0, LABEL_OFF), normal: surfaceNormal(s.y, -1.0) };
+    } else if (s.kind === 'headband') {
+        const y = 1.3, rx = HEAD_AT(y) + 0.005, rz = rx * 1.12;
+        const band = new THREE.Mesh(new THREE.CylinderGeometry(1, 1, 0.03, 72, 1, true), own(M.band));
+        band.scale.set(rx, 1, rz); band.position.y = y; register(s, band);
+        const pod = new THREE.Mesh(housing(0.05, 0.03, 0.012, 0.008, 0.002), own(M.polymer));
+        pod.position.set(0, y, rz + 0.006); orient(pod, new THREE.Vector3(0, 0, 1)); register(s, pod);
+        const led = new THREE.Mesh(new THREE.CircleGeometry(0.0032, 16), M.glow);
+        led.position.set(0.016, y + 0.006, rz + 0.0126); body.add(led);
+        anchors[s.id] = { point: new THREE.Vector3(0, y + 0.04, rz + 0.03), normal: new THREE.Vector3(0, 0, 1) };
+    } else if (s.kind === 'disc') {
+        const n = surfaceNormal(s.y, s.t);
+        const disc = new THREE.Mesh(new THREE.CylinderGeometry(0.016, 0.016, 0.006, 32), own(M.polymer));
+        disc.position.copy(surfacePoint(s.y, s.t, 0.004)); orient(disc, n); register(s, disc);
+        const tip = new THREE.Mesh(new THREE.CylinderGeometry(0.006, 0.006, 0.008, 20), M.metal);
+        tip.position.copy(surfacePoint(s.y, s.t, 0.002)); orient(tip, n); insideParts.push(tip); body.add(tip);
+        anchors[s.id] = { point: surfacePoint(s.y, s.t, LABEL_OFF), normal: n };
+    } else if (s.kind === 'marker') {
+        anchors[s.id] = { point: surfacePoint(s.y + 0.04, s.t, LABEL_OFF + 0.03), normal: surfaceNormal(s.y, s.t) };
+    } else if (s.kind === 'armcuff') {
+        // upper left arm, housing facing out to the side and slightly forward
+        const a = limbStrap(s, limbs.armLeft, -0.15, 0.064, 0.085, new THREE.Vector3(0.82, 0, 0.57).normalize(), [0.05, 0.04, 0.016]);
+        anchors[s.id] = { point: a.point, normal: a.normal };
+    } else if (s.kind === 'thighstrap') {
+        // right thigh, sensor on the front of the thigh muscle
+        const a = limbStrap(s, limbs.legRight, -0.14, 0.106, 0.045, new THREE.Vector3(0, 0, 1), [0.045, 0.03, 0.01]);
+        anchors[s.id] = { point: a.point, normal: a.normal };
+    } else if (s.kind === 'gsr') {
+        // two small skin electrodes inside the headband, on either side of the forehead
+        const y = 1.3, rx = HEAD_AT(y) + 0.008, rz = rx * 1.12;
+        for (const t of [-0.55, 0.55]) {
+            const stud = new THREE.Mesh(new THREE.CylinderGeometry(0.007, 0.007, 0.004, 20), own(M.electrode));
+            const n = new THREE.Vector3(Math.sin(t) / rx, 0, Math.cos(t) / rz).normalize();
+            stud.position.set(Math.sin(t) * rx, y, Math.cos(t) * rz); orient(stud, n); register(s, stud);
+        }
+        anchors[s.id] = { point: new THREE.Vector3(Math.sin(0.7) * (rx + 0.04), y + 0.035, Math.cos(0.7) * (rz + 0.04)), normal: new THREE.Vector3(Math.sin(0.7), 0, Math.cos(0.7)) };
+    } else if (s.kind === 'module' || s.kind === 'display') {
+        const n = surfaceNormal(s.y, s.t);
+        const [w, h, d] = s.size;
+        const box = new THREE.Mesh(housing(w, h, d, 0.012, 0.003), own(M.polymer));
+        box.position.copy(surfacePoint(s.y, s.t, VEST_OFF + d / 2 + 0.002)); orient(box, n); register(s, box);
+        const across = new THREE.Vector3(0, 1, 0).cross(n).normalize();
+        const onFace = (dx, dy, lift = 0.0012) => box.position.clone().addScaledVector(n, d / 2 + lift).addScaledVector(across, dx).add(new THREE.Vector3(0, dy, 0));
+        const flat = (mesh) => { mesh.lookAt(mesh.position.clone().add(n)); body.add(mesh); return mesh; };
+        if (s.kind === 'display') {
+            const screenTex = (() => {
+                const c = document.createElement('canvas'); c.width = 256; c.height = 128;
+                const g = c.getContext('2d');
+                g.fillStyle = '#05080c'; g.fillRect(0, 0, 256, 128);
+                g.fillStyle = '#7cc4ff'; g.font = '600 30px Lexend, sans-serif';
+                g.fillText('SpO₂ 97%', 18, 48); g.fillText('♥ 72', 18, 96);
+                g.fillStyle = '#2e6aa8'; g.fillRect(150, 70, 86, 6);
+                const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace; return tex;
+            })();
+            flat(new THREE.Mesh(new THREE.PlaneGeometry(0.056, 0.03), new THREE.MeshBasicMaterial({ map: screenTex }))).position.copy(onFace(-0.008, 0.003));
+            [[0x1fa463, 0.028], [0xe23d50, 0.028]].forEach(([c, dx], k) => {
+                flat(new THREE.Mesh(new THREE.CircleGeometry(0.0035, 16), new THREE.MeshBasicMaterial({ color: c }))).position.copy(onFace(dx, 0.009 - k * 0.012));
+            });
+        } else if (s.id === 'mcu') {
+            flat(new THREE.Mesh(new THREE.PlaneGeometry(0.0045, 0.06), M.glow)).position.copy(onFace(0, -0.02));
+            flat(new THREE.Mesh(new THREE.CircleGeometry(0.0045, 16), M.glow)).position.copy(onFace(0, 0.045));
+            for (let k = 0; k < 4; k++) flat(new THREE.Mesh(new THREE.PlaneGeometry(0.05, 0.0018), new THREE.MeshBasicMaterial({ color: 0x15171b }))).position.copy(onFace(0, 0.02 - k * 0.006 + 0.012));
+            // the motion sensor sits inside this housing
+            const imu = SENSORS.find((x) => x.id === 'imu');
+            const mark = flat(new THREE.Mesh(new THREE.RingGeometry(0.004, 0.0065, 24), new THREE.MeshBasicMaterial({ color: new THREE.Color(imu.color) })));
+            mark.position.copy(onFace(0.03, 0.05)); register(imu, mark);
+        } else if (s.id === 'dose') {
+            // dosimeter badge: small readout window and a status light
+            flat(new THREE.Mesh(new THREE.PlaneGeometry(0.026, 0.014), M.glass)).position.copy(onFace(0, 0.01));
+            flat(new THREE.Mesh(new THREE.CircleGeometry(0.0028, 16), M.glow)).position.copy(onFace(0, -0.016));
+        } else {
+            flat(new THREE.Mesh(new THREE.PlaneGeometry(0.05, 0.004), M.glow)).position.copy(onFace(0, 0));
+        }
+        anchors[s.id] = { point: surfacePoint(s.y - 0.02, s.t, LABEL_OFF + d), normal: n };
+    }
+}
+
+// Wiring between the base layer and the vest (shown in X-ray), to the controller on the upper back.
+const BACK = Math.PI;
+function addWire(points) { const w = tube(points, 0.003, M.wire); insideParts.push(w); body.add(w); }
+const toController = (p) => ({ y: 0.78, t: p.t >= 0 ? BACK - 0.16 : -BACK + 0.16 });
+SENSORS[0].points.forEach((p) => addWire(curveOnTorso(p, toController(p), 0.009)));
+addWire(curveOnTorso({ y: 0.68, t: BACK - 0.45 }, { y: 0.75, t: BACK - 0.1 }, 0.011));       // breathing band
+addWire(curveOnTorso({ y: 0.74, t: 1.32 }, { y: 0.77, t: BACK - 0.14 }, 0.009));               // skin temperature
+addWire(curveOnTorso({ y: 0.55, t: 0.5 }, { y: 0.74, t: BACK - 0.18 }, 0.009));                // display
+addWire(curveOnTorso({ y: 0.57, t: BACK }, { y: 0.73, t: BACK }, 0.009));                      // battery → controller// headband cable: back of the head → behind the neck → into the back collar of the vest
+const hb = HEAD_AT(1.3) * 1.12;
+body.add(tube([new THREE.Vector3(0, 1.29, -hb - 0.004), new THREE.Vector3(0, 1.19, -0.118), new THREE.Vector3(0, 1.08, -0.072), new THREE.Vector3(0, 1.0, -0.09), surfacePoint(VEST_TOP - 0.01, BACK, VEST_OFF + 0.004)], 0.0028, M.trim));
+addWire(curveOnTorso({ y: 0.94, t: BACK }, { y: 0.86, t: BACK }, 0.009, 10));
+insideParts.forEach((m) => { m.castShadow = false; });
+
+// ================================================================ X-ray
+function setXray(on) {
+    xray = on;
+    for (const m of VEST_LAYER) { m.transparent = on; m.opacity = on ? 0.16 : 1; m.depthWrite = !on; m.needsUpdate = true; }
+    insideParts.forEach((m) => { m.renderOrder = on ? 2 : 0; });
+    document.querySelector('[data-xray]').setAttribute('aria-pressed', String(on));
+}
+
+// ================================================================ labels, list, detail
+const labelsBox = document.querySelector('[data-labels]');
+const labelEls = {};
+for (const s of SENSORS) {
+    const el = document.createElement('button');
+    el.type = 'button'; el.className = 'label'; el.dataset.sensor = s.id;
+    labelsBox.append(el); labelEls[s.id] = el;
+    el.addEventListener('click', () => select(s.id, true));
+}
+const esc = (v) => String(v).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const tr = (k) => UI[lang][k];
+
+function renderTexts() {
+    document.documentElement.lang = lang;
+    document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
+    document.querySelectorAll('[data-i18n]').forEach((el) => { el.textContent = tr(el.dataset.i18n); });
+    document.querySelector('[data-lang]').textContent = tr('lang');
+    document.querySelector('[data-xray]').textContent = tr('xray');
+    document.querySelector('[data-reset]').textContent = tr('reset');
+    updateRotateButton();
+    document.querySelector('[data-legend]').innerHTML = [['vitals', '#e23d50'], ['body', '#1fa463'], ['radiation', '#c9b11a'], ['electronics', '#2a3350']]
+        .map(([c, color]) => `<span><i style="background:${color}"></i>${esc(tr(`cat_${c}`))}</span>`).join('')
+        + `<span><i class="ring"></i>${esc(tr('inside'))}</span>`;
+    SENSORS.forEach((s, i) => { labelEls[s.id].innerHTML = `<span class="num" style="background:${s.color}">${i + 1}</span>${esc(s.short[lang])}<span class="label-val" data-label-val="${s.id}"></span>`; });
+    document.querySelector('[data-live-chip]').textContent = tr('live_chip');
+    document.querySelector('[data-list]').innerHTML = SENSORS.map((s, i) => `
+        <li><button class="sensor-btn" type="button" data-pick="${s.id}" aria-pressed="${s.id === selected}">
+            <span class="num" style="background:${s.color}${s.inside ? ';outline:2px dashed #9aa3bf;outline-offset:2px' : ''}">${i + 1}</span><strong>${esc(s.name[lang])}</strong>
+            <span class="cat" data-cat="${s.cat}">${esc(tr(`cat_${s.cat}`))}</span>
+        </button></li>`).join('');
+    const boxItems = (list) => list.map((c) => `
+        <li>
+            <div class="periodic-head"><strong>${esc(c.name[lang])}</strong><span class="periodic-when">${esc(c.when[lang])}</span></div>
+            <p>${esc(c.device[lang])}</p>
+            <p class="periodic-note">${esc(c.note[lang])}</p>
+        </li>`).join('');
+    document.querySelector('[data-periodic]').innerHTML = boxItems(PERIODIC);
+    document.querySelector('[data-future]').innerHTML = boxItems(FUTURE);
+    document.querySelector('[data-offbody]').innerHTML = OFF_BODY.map((o) => `<li><strong>${esc(o.name[lang])}</strong> — ${esc(o.text[lang])}</li>`).join('');
+    document.querySelector('[data-sources]').innerHTML = `${esc(tr('sources'))} ` + SOURCES.map(([url, name]) => `<a href="${url}" target="_blank" rel="noopener">${esc(name[lang])}</a>`).join(' · ');
+    renderDetail();
+}
+function renderDetail() {
+    const i = SENSORS.findIndex((s) => s.id === selected);
+    const s = SENSORS[i];
+    const row = (k) => `<div><dt>${esc(tr(k))}</dt><dd>${esc(s[k][lang])}</dd></div>`;
+    document.querySelector('[data-detail]').innerHTML = `
+        <div class="detail-head"><span class="num" style="background:${s.color}">${i + 1}</span><h3>${esc(s.name[lang])}</h3><span class="cat" data-cat="${s.cat}">${esc(tr(`cat_${s.cat}`))}</span></div>
+        <div data-live></div>
+        <dl>${['measures', 'mount', 'real', 'why'].map(row).join('')}</dl>`;
+    renderLive();
+    document.querySelectorAll('[data-pick]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.pick === selected)));
+    Object.entries(labelEls).forEach(([id, el]) => el.classList.toggle('is-selected', id === selected));
+}
+
+// ================================================================ interaction
+let turn = null;
+function select(id, face) {
+    selected = id;
+    renderDetail();
+    const s = SENSORS.find((x) => x.id === id);
+    if (s.inside && !xray) setXray(true);
+    if (face) {
+        setAutoRotate(false);
+        const a = anchors[id];
+        const radius = Math.min(camera.position.distanceTo(controls.target), 2.6);
+        const azimuth = Math.atan2(a.normal.x, a.normal.z);
+        const targetY = THREE.MathUtils.clamp(a.point.y, -0.2, 1.28);
+        turn = {
+            fromPos: camera.position.clone(), fromTarget: controls.target.clone(),
+            toTarget: new THREE.Vector3(0, targetY, 0),
+            toPos: new THREE.Vector3(Math.sin(azimuth) * radius, targetY + 0.14, Math.cos(azimuth) * radius),
+            start: performance.now(), ms: reduceMotion ? 1 : 750,
+        };
+    }
+}
+document.querySelector('[data-list]').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-pick]');
+    if (b) select(b.dataset.pick, true);
+});
+const raycaster = new THREE.Raycaster();
+const pointer = new THREE.Vector2();
+const pickTargets = () => (xray ? pickables : pickables.filter((m) => !insideParts.includes(m)));
+let downAt = null;
+canvas.addEventListener('pointerdown', (e) => { downAt = [e.clientX, e.clientY]; });
+canvas.addEventListener('pointerup', (e) => {
+    if (!downAt || Math.hypot(e.clientX - downAt[0], e.clientY - downAt[1]) > 5) return;
+    const r = canvas.getBoundingClientRect();
+    pointer.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
+    raycaster.setFromCamera(pointer, camera);
+    const hit = raycaster.intersectObjects(pickTargets(), false)[0];
+    if (hit) select(hit.object.userData.sensor, true);
+});
+canvas.addEventListener('pointermove', (e) => {
+    const r = canvas.getBoundingClientRect();
+    pointer.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
+    raycaster.setFromCamera(pointer, camera);
+    canvas.style.cursor = raycaster.intersectObjects(pickTargets(), false).length ? 'pointer' : 'grab';
+});
+function setAutoRotate(on) { controls.autoRotate = on; updateRotateButton(); }
+function updateRotateButton() {
+    const b = document.querySelector('[data-rotate]');
+    b.textContent = tr(controls.autoRotate ? 'rotate_on' : 'rotate_off');
+    b.setAttribute('aria-pressed', String(controls.autoRotate));
+}
+document.querySelector('[data-rotate]').addEventListener('click', () => setAutoRotate(!controls.autoRotate));
+document.querySelector('[data-xray]').addEventListener('click', () => setXray(!xray));
+document.querySelector('[data-reset]').addEventListener('click', () => {
+    turn = { fromPos: camera.position.clone(), fromTarget: controls.target.clone(), toPos: HOME.clone(), toTarget: TARGET.clone(), start: performance.now(), ms: reduceMotion ? 1 : 750 };
+});
+document.querySelector('[data-lang]').addEventListener('click', () => {
+    lang = lang === 'ar' ? 'en' : 'ar';
+    try { localStorage.setItem('orbitcare-vest-lang', lang); } catch { /* private mode: language just isn't remembered */ }
+    renderTexts();
+});
+
+// ================================================================ live readings (signed-in OrbitCare user)
+// The same replay as the dashboard: numbers from GET /api/health/current, the recording's real 125 Hz
+// waveforms from GET /api/health/waveform, each shown on the sensor that would measure it.
+// Opened without a session, or offline, the page simply stays a static preview.
+const LIVE = {
+    ecg: { metrics: [['heart_rate', 'u_bpm']], channel: 'ecg', seconds: 5, sharp: 3 },
+    ppg: { metrics: [['spo2', 'u_pct'], ['pulse_rate', 'u_bpm']], channel: 'ppg', seconds: 5, sharp: 1.5 },
+    breath: { metrics: [['respiratory_rate', 'u_brpm']], channel: 'resp', seconds: 12, sharp: 1 },
+};
+// Sensors fed by open recorded data (GET /api/health/sensors) or by the astronaut's own daily check-in.
+const OPEN = {
+    temp: { sensor: 'skin_temperature', unit: 'u_c', digits: 1, from: 'body' },
+    gsr: { sensor: 'skin_conductance', unit: 'u_rel', digits: 2, from: 'body' },
+    imu: { sensor: 'movement', unit: 'u_rel', digits: 3, from: 'body' },
+    dose: { sensor: 'radiation_dose_rate', unit: 'u_ugyh', digits: 1, from: 'nasa' },
+    emg: { checkin: 'exercise' },
+};
+let open = null;    // newest /health/sensors response
+const astronautId = /^\d+$/.test(params.get('astronaut_id') ?? '') ? params.get('astronaut_id') : null;
+const LAG = 2;      // traces run this many seconds behind the newest sample, so they scroll smoothly
+let live = null;    // { metrics: { name: metric }, replay }
+let wave = null;    // newest waveform window from the server
+let cursor = 0;     // recording time (s) at the right edge of the traces
+
+const fmt = (v) => String(Math.round(v));
+const mmss = (s) => `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
+
+async function getApi(path, query = '') {
+    const q = new URLSearchParams(query);
+    if (astronautId) q.set('astronaut_id', astronautId);
+    const response = await fetch(`../../api/${path}?${q}`, { credentials: 'same-origin', headers: { Accept: 'application/json' } });
+    const body = await response.json();
+    if (!response.ok || !body.ok) throw new Error(`HTTP ${response.status}`);
+    return body.data;
+}
+
+async function pollCurrent() {
+    try {
+        const data = await getApi('health/current');
+        if (!data.replay) throw new Error('no data source');
+        const first = live === null;
+        live = { metrics: Object.fromEntries(data.metrics.map((m) => [m.metric, m])), replay: data.replay };
+        if (first) startLive();
+        renderLive();
+    } catch (error) {
+        if (live === null) return;   // not signed in, or offline: keep the static preview
+    }
+    setTimeout(pollCurrent, 2000);
+}
+
+function startLive() {
+    document.querySelector('[data-live-chip]').hidden = false;
+    const back = document.querySelector('[data-back]');
+    // mission admins come from a crew member's page: go back there
+    try { if (astronautId && new URL(document.referrer).origin === location.origin) back.href = document.referrer; } catch { /* no referrer: dashboard */ }
+    back.hidden = false;
+    pollWave();
+    pollOpen();
+}
+
+async function pollOpen() {
+    try {
+        open = await getApi('health/sensors');
+        renderLive();
+    } catch { /* keep the last values; the next poll retries */ }
+    setTimeout(pollOpen, 2000);
+}
+
+const fmtN = (v, digits) => Number(v).toFixed(digits);
+const isoDate = (iso) => (iso ? String(iso).slice(0, 10) : '');
+
+// Value, trend and source for a sensor fed by open data or by the check-in; '' when there is nothing to show.
+function openBlock(id) {
+    const cfg = OPEN[id];
+    const reading = cfg.sensor ? open?.sensors?.[cfg.sensor] : null;
+    const checkin = open?.self_reported ?? null;
+    const vals = [];
+    let srcText = '';
+    if (reading) {
+        vals.push(`<div class="live-val"><b>${esc(fmtN(reading.value, cfg.digits))}<small>${esc(tr(cfg.unit))}</small></b><span><i></i>${esc(tr(`m_${cfg.sensor}`))}</span></div>`);
+        if (cfg.from === 'nasa') {
+            vals.push(`<div class="live-val"><b>${esc(fmtN(reading.recording_mean, 1))}<small>${esc(tr(cfg.unit))}</small></b><span><i></i>${esc(tr('m_day_mean'))}</span></div>`);
+            srcText = tr('src_nasa').replace('{date}', isoDate(reading.measured_at)).replace('{daily}', fmtN(reading.recording_mean_daily_mgy, 2));
+        } else {
+            srcText = tr('src_body').replace('{n}', reading.source.id.replace('noneeg:Subject', ''));
+        }
+    }
+    if (cfg.checkin === 'exercise' || id === 'dose') {
+        if (checkin) {
+            if (id === 'dose' && checkin.radiation_dose_msv !== null) {
+                vals.push(`<div class="live-val"><b>${esc(fmtN(checkin.radiation_dose_msv, 3))}<small>mSv</small></b><span><i></i>${esc(tr('m_logged_dose'))}</span></div>`);
+            }
+            if (cfg.checkin === 'exercise') {
+                vals.push(`<div class="live-val"><b>${esc(String(checkin.resistance_minutes))}<small>${esc(tr('u_min'))}</small></b><span><i></i>${esc(tr('m_resistance'))}</span></div>`);
+                vals.push(`<div class="live-val"><b>${esc(String(checkin.aerobic_minutes))}<small>${esc(tr('u_min'))}</small></b><span><i></i>${esc(tr('m_aerobic'))}</span></div>`);
+            }
+            srcText += `${srcText ? ' ' : ''}${tr('src_checkin').replace('{date}', checkin.date)}`;
+        } else if (cfg.checkin === 'exercise') {
+            srcText = tr('no_checkin');
+        }
+    }
+    if (!vals.length && !srcText) return '';
+    return `<div class="live-head"><span>${esc(tr(reading ? 'live_now' : 'checkin_head'))}</span><span></span></div>
+        ${vals.length ? `<div class="live-values">${vals.join('')}</div>` : ''}
+        ${reading ? `<span data-live-slot></span><p class="live-wave-name">${esc(tr(cfg.from === 'nasa' ? 'w_dose' : 'w_body'))}</p>` : ''}
+        <p class="live-src">${esc(srcText)}</p>`;
+}
+
+async function pollWave() {
+    try {
+        const data = await getApi('health/waveform', 'seconds=12');
+        if (data.available) {
+            const running = data.replay?.status === 'running';
+            wave = { ...data, running, speed: data.replay?.speed ?? 1 };
+            if (!running) cursor = data.end_seconds;
+            else if (cursor > data.end_seconds || cursor < data.end_seconds - 4) cursor = Math.max(0, data.end_seconds - LAG);
+        } else {
+            wave = null;
+        }
+    } catch { /* keep the last window; the next poll retries */ }
+    setTimeout(pollWave, 1000);
+}
+
+function renderLive() {
+    for (const [id, cfg] of Object.entries(LIVE)) {
+        const el = document.querySelector(`[data-label-val="${id}"]`);
+        const m = live?.metrics[cfg.metrics[0][0]];
+        if (el) el.textContent = m?.available ? `· ${fmt(m.value)}${cfg.metrics[0][1] === 'u_pct' ? '%' : ''}` : '';
+    }
+    for (const [id, cfg] of Object.entries(OPEN)) {
+        const el = document.querySelector(`[data-label-val="${id}"]`);
+        const r = cfg.sensor ? open?.sensors?.[cfg.sensor] : null;
+        if (el) el.textContent = r && cfg.from ? `· ${fmtN(r.value, cfg.digits === 3 ? 2 : Math.min(cfg.digits, 1))}${cfg.unit === 'u_c' ? '°' : ''}` : '';
+    }
+    const box = document.querySelector('[data-live]');
+    if (!box) return;
+    if (live && OPEN[selected]) {
+        const html = openBlock(selected);
+        box.className = html ? 'live' : '';
+        box.innerHTML = html;
+        box.querySelector('[data-live-slot]')?.replaceWith(liveCanvas);
+        return;
+    }
+    const cfg = LIVE[selected];
+    if (!live || !cfg) { box.className = ''; box.innerHTML = ''; return; }
+    const r = live.replay;
+    const recorded = r.mode === 'recorded_data_replay';
+    const values = cfg.metrics.map(([key, unit]) => {
+        const m = live.metrics[key];
+        return `<div class="live-val"><b>${m?.available ? fmt(m.value) : '—'}<small>${esc(tr(unit))}</small></b>
+            <span><i data-c="${m?.available ? esc(m.classification) : ''}"></i>${esc(tr(`m_${key}`))}</span></div>`;
+    }).join('');
+    const anyValue = cfg.metrics.some(([key]) => live.metrics[key]?.available);
+    box.className = 'live';
+    box.innerHTML = `
+        <div class="live-head"><span>${esc(tr('live_now'))}</span><span>${esc(r.status === 'completed' ? tr('live_done') : tr('live_rec').replace('{t}', mmss(r.position_seconds)))}</span></div>
+        <div class="live-values">${values}</div>
+        ${anyValue ? '' : `<p class="live-src">${esc(tr('live_none'))}</p>`}
+        ${recorded ? `<span data-live-slot></span><p class="live-wave-name">${esc(tr(`w_${cfg.channel}`))}</p>
+        <p class="live-src">${esc(tr('live_src').replace('{record}', r.record_id ?? ''))}</p>` : ''}`;
+    // the same canvas is moved back in, so the trace never blinks when the numbers refresh
+    box.querySelector('[data-live-slot]')?.replaceWith(liveCanvas);
+}
+const liveCanvas = document.createElement('canvas');
+liveCanvas.dataset.liveWave = '';
+
+// Samples of one channel ending at the cursor, plus their range (for scaling and for the glow).
+function liveWindow(cfg) {
+    const data = wave?.channels?.[cfg.channel];
+    if (!data?.length) return null;
+    const end = Math.min(data.length, Math.round((cursor - wave.start_seconds) * wave.fs));
+    const span = Math.round(cfg.seconds * wave.fs);
+    const start = end - span;
+    let lo = Infinity, hi = -Infinity;
+    for (let i = Math.max(0, start); i < end; i++) if (data[i] !== null) { lo = Math.min(lo, data[i]); hi = Math.max(hi, data[i]); }
+    if (!(hi > lo)) return null;
+    return { data, start, end, span, lo, hi };
+}
+
+// 0..1: where the newest sample sits in the window — the sensor glows with each real heartbeat / breath.
+function liveLevel(cfg) {
+    const w = liveWindow(cfg);
+    const v = w?.data[w.end - 1];
+    return v === null || v === undefined ? null : ((v - w.lo) / (w.hi - w.lo)) ** cfg.sharp;
+}
+
+function drawLive(dt) {
+    if (wave?.running) cursor = Math.min(wave.end_seconds, cursor + dt * wave.speed);
+    const cfg = LIVE[selected];
+    const c = document.querySelector('[data-live-wave]');
+    if (!c || !(cfg || OPEN[selected])) return;
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const w = c.clientWidth, h = c.clientHeight;
+    if (c.width !== Math.round(w * dpr) || c.height !== Math.round(h * dpr)) { c.width = Math.round(w * dpr); c.height = Math.round(h * dpr); }
+    const g = c.getContext('2d');
+    g.setTransform(dpr, 0, 0, dpr, 0, 0);
+    g.clearRect(0, 0, w, h);
+    if (!cfg) { drawSeries(g, w, h); return; }
+    const win = liveWindow(cfg);
+    if (!win) return;
+    const color = SENSORS.find((s) => s.id === selected).color;
+    g.strokeStyle = color; g.lineWidth = 1.6; g.lineJoin = 'round';
+    g.beginPath();
+    let pen = false;
+    for (let i = Math.max(0, win.start); i < win.end; i++) {
+        const v = win.data[i];
+        if (v === null) { pen = false; continue; }   // a gap in the recording stays a gap
+        const x = ((i - win.start) / win.span) * w;
+        const y = h - 6 - ((v - win.lo) / (win.hi - win.lo)) * (h - 12);
+        if (pen) g.lineTo(x, y); else { g.moveTo(x, y); pen = true; }
+    }
+    g.stroke();
+}
+
+// Trend of a 1-per-second (body) or about 1-per-minute (dose) open-data series, oldest at the left.
+function drawSeries(g, w, h) {
+    const series = open?.sensors?.[OPEN[selected].sensor]?.series;
+    if (!series || series.length < 2) return;
+    const t0 = series[0][0], t1 = series[series.length - 1][0];
+    let lo = Infinity, hi = -Infinity;
+    for (const [, v] of series) { lo = Math.min(lo, v); hi = Math.max(hi, v); }
+    if (hi - lo < 1e-9) { lo -= 1; hi += 1; }
+    g.strokeStyle = SENSORS.find((s) => s.id === selected).color;
+    g.lineWidth = 1.8; g.lineJoin = 'round';
+    g.beginPath();
+    series.forEach(([t, v], i) => {
+        const x = t1 > t0 ? ((t - t0) / (t1 - t0)) * w : w / 2;
+        const y = h - 6 - ((v - lo) / (hi - lo)) * (h - 12);
+        if (i) g.lineTo(x, y); else g.moveTo(x, y);
+    });
+    g.stroke();
+}
+
+// ================================================================ render loop
+function resize() {
+    const { clientWidth: w, clientHeight: h } = stage;
+    renderer.setSize(w, h, false);
+    camera.aspect = w / h;
+    camera.updateProjectionMatrix();
+}
+new ResizeObserver(resize).observe(stage);
+resize();
+
+const tmp = new THREE.Vector3();
+const toCamera = new THREE.Vector3();
+function placeLabels() {
+    const { clientWidth: w, clientHeight: h } = stage;
+    for (const s of SENSORS) {
+        const a = anchors[s.id];
+        tmp.copy(a.point).applyMatrix4(body.matrixWorld);
+        toCamera.copy(camera.position).sub(tmp).normalize();
+        const facing = a.normal.dot(toCamera) > 0.15;
+        tmp.project(camera);
+        const el = labelEls[s.id];
+        el.style.left = `${(tmp.x * 0.5 + 0.5) * w}px`;
+        el.style.top = `${(-tmp.y * 0.5 + 0.5) * h}px`;
+        el.classList.toggle('is-hidden', !facing);
+    }
+}
+const ease = (f) => 1 - (1 - f) ** 3;
+let lastFrame = null;
+function frame(now) {
+    const dt = lastFrame === null ? 0 : Math.min(0.1, (now - lastFrame) / 1000);
+    lastFrame = now;
+    drawLive(dt);
+    if (turn) {
+        const f = Math.min(1, (now - turn.start) / turn.ms);
+        camera.position.lerpVectors(turn.fromPos, turn.toPos, ease(f));
+        controls.target.lerpVectors(turn.fromTarget, turn.toTarget, ease(f));
+        if (f >= 1) turn = null;
+    }
+    // The selected sensor lights up in its legend colour. With live data, the ECG electrodes, the
+    // headband pulse sensor and the breathing band glow with the recording's own beats and breaths.
+    const pulse = reduceMotion ? 0.45 : 0.25 + 0.35 * (0.5 + 0.5 * Math.sin(now / 280));
+    for (const s of SENSORS) {
+        const level = wave && LIVE[s.id] && !reduceMotion ? liveLevel(LIVE[s.id]) : null;
+        const glow = level !== null ? (s.id === selected ? 0.1 : 0.04) + (s.id === selected ? 0.75 : 0.45) * level
+            : s.id === selected ? pulse : 0;
+        for (const m of meshesBySensor[s.id] ?? []) {
+            if (!m.material.emissive) continue;
+            m.material.emissive.set(s.color);
+            m.material.emissiveIntensity = glow;
+        }
+    }
+    controls.update();
+    renderer.render(scene, camera);
+    placeLabels();
+    requestAnimationFrame(frame);
+}
+
+renderTexts();
+setXray(params.has('xray'));
+if (SENSORS.some((s) => s.id === params.get('sensor'))) select(params.get('sensor'), true);
+requestAnimationFrame(frame);
+pollCurrent();
+</script>
+</body>
+</html>

@@ -1,0 +1,20 @@
+# OrbitCare — Apache rules
+
+# Private folders and files are never served to browsers.
+RedirectMatch 404 ^/[^/]+/(backend|config|data|cli|tests|logs|docs|frontend)(/|$)
+<FilesMatch "^\.(env|git)|\.(md|sql|log)$">
+    Require all denied
+</FilesMatch>
+
+# Scripts and styles: the browser must check for a newer version on every load (a quick
+# 304 when unchanged). Without this, an old cached api.js can be mixed with a new page
+# script after an update, and the page's JavaScript fails to start.
+<IfModule mod_headers.c>
+    <FilesMatch "\.(js|css)$">
+        Header set Cache-Control "no-cache"
+    </FilesMatch>
+</IfModule>
+
+# /api/<path>  →  api/index.php?route=<path>
+RewriteEngine On
+RewriteRule ^api/(.*)$ api/index.php?route=$1 [QSA,L]

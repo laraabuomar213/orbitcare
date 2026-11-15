@@ -1,0 +1,27 @@
+<?php
+// Settings page.
+return [
+    'settings.account' => 'Account',
+    'settings.name' => 'Name',
+    'settings.email' => 'Email',
+    'settings.role' => 'Role',
+    'role.astronaut' => 'Astronaut',
+    'role.mission_admin' => 'Mission admin',
+    'settings.language' => 'Language',
+    'settings.language_hint' => 'Choose the language of the whole app. It is saved to your account and this device.',
+    'settings.notifications_display' => 'Notifications and display',
+    'settings.in_app_alerts' => 'In-app alert notifications',
+    'settings.in_app_alerts_hint' => 'Show the alert badge and alert cards.',
+    'settings.alert_sound' => 'Alert sound',
+    'settings.alert_sound_hint' => 'Play a short sound when a new alert appears.',
+    'settings.reduce_motion' => 'Reduce motion',
+    'settings.reduce_motion_hint' => 'Turn off animations in the app.',
+    'settings.privacy' => 'Privacy',
+    'settings.privacy_text' => 'Your health data is visible only to you and to approved mission administrators of the missions you belong to. Other astronauts in your mission cannot see your measurements or alerts — except in an emergency, when your crew hears your name and the problem so they can help.',
+    'settings.privacy_audit' => 'Every view of crew health data by an administrator is recorded in the audit log.',
+    'settings.security' => 'Security',
+    'settings.current_password' => 'Current password',
+    'settings.new_password' => 'New password',
+    'settings.change_password' => 'Change password',
+    'settings.password_changed' => 'Password changed.',
+];

@@ -1,0 +1,2249 @@
+/* ==========================================================================
+   OrbitCare — Main stylesheet
+
+   1.  Design tokens
+   2.  Base
+   3.  Utilities
+   4.  Buttons
+   5.  Shared headings
+   6.  Brand logo
+   7.  Navbar
+   8.  Hero
+   9.  Feature bar
+   10. How It Works
+   11. Advanced Care
+   12. Testimonials
+   13. CTA banner
+   14. Footer
+   15. Scroll reveal
+   16. Welcome modal
+   17. Login modal
+   18. Language switch & right-to-left (Arabic)
+
+   Each section keeps its own tablet (≤1100px / ≤900px) and mobile (≤600px)
+   rules right below it, so everything about one part of the page is in one place.
+   ========================================================================== */
+
+
+/* 1. Design tokens
+   Reusable values for the whole site. Change one here and it updates everywhere.
+   -------------------------------------------------------------------------- */
+
+:root {
+    /* Colors */
+    --color-navy-950: #0b1230;
+    --color-navy-900: #121a3a;
+    --color-navy-800: #1c2550;
+    --color-text: #2a3256;
+    --color-text-muted: #5f6889;
+    --color-accent: #4a5fc1;
+    --color-page: #eceffa;
+    --color-white: #ffffff;
+    --color-border: rgba(28, 37, 80, 0.22);
+    --color-border-subtle: rgba(28, 37, 80, 0.08);
+    --color-glass: rgba(255, 255, 255, 0.55);
+    --color-glass-border: rgba(255, 255, 255, 0.85);
+
+    /* Typography — clamp(min, preferred, max) scales text smoothly with screen width */
+    /* Lexend covers Latin; IBM Plex Sans Arabic covers Arabic (both self-hosted, fonts.css). */
+    --font-family-base: "Lexend", "IBM Plex Sans Arabic", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --font-size-xs: 0.75rem;     /* 12px */
+    --font-size-sm: 0.875rem;    /* 14px */
+    --font-size-md: 0.9375rem;   /* 15px */
+    --font-size-base: 1rem;      /* 16px */
+    --font-size-lead: clamp(1.0625rem, 1rem + 0.25vw, 1.1875rem);
+    --font-size-h3: 1.0625rem;
+    --font-size-h2-small: clamp(1.75rem, 1.35rem + 1.3vw, 2.25rem);
+    --font-size-h2: clamp(2rem, 1.4rem + 1.6vw, 2.5rem);
+    --font-size-display: clamp(2.5rem, 1.5rem + 3.2vw, 4rem);
+
+    /* Spacing scale */
+    --space-1: 0.25rem;   /* 4px */
+    --space-2: 0.5rem;    /* 8px */
+    --space-3: 0.75rem;   /* 12px */
+    --space-4: 1rem;      /* 16px */
+    --space-5: 1.5rem;    /* 24px */
+    --space-6: 2rem;      /* 32px */
+    --space-7: 3rem;      /* 48px */
+    --space-8: 4rem;      /* 64px */
+    --space-9: 6rem;      /* 96px */
+
+    /* Layout */
+    --content-max-width: 1280px;
+    --container-padding: clamp(var(--space-4), 5vw, var(--space-8));
+    --header-height: 6.25rem;
+
+    /* Shape and effects */
+    --radius-pill: 999px;
+    --radius-md: 1rem;
+    --radius-lg: 1.25rem;
+    --radius-xl: 1.75rem;
+    --shadow-soft: 0 12px 32px rgba(18, 26, 58, 0.12);
+    --shadow-card: 0 10px 40px rgba(40, 55, 120, 0.08);
+    --transition-fast: 0.2s ease;
+}
+
+@media (max-width: 900px) {
+    :root {
+        --header-height: 5.25rem;
+    }
+}
+
+
+/* 2. Base
+   -------------------------------------------------------------------------- */
+
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+
+body,
+h1,
+h2,
+h3,
+p,
+ul,
+ol,
+figure,
+blockquote {
+    margin: 0;
+}
+
+/* :where() keeps this reset at zero specificity, so any class can override it. */
+:where(ul, ol)[class] {
+    padding: 0;
+    list-style: none;
+}
+
+/* Anchor links (e.g. "Learn More") glide to their section instead of jumping. */
+@media (prefers-reduced-motion: no-preference) {
+    html {
+        scroll-behavior: smooth;
+    }
+}
+
+body {
+    min-height: 100vh;
+    overflow-x: clip;
+    font-family: var(--font-family-base);
+    font-size: var(--font-size-base);
+    line-height: 1.6;
+    color: var(--color-text);
+    background-color: var(--color-page);
+    -webkit-font-smoothing: antialiased;
+}
+
+img,
+svg {
+    display: block;
+    max-width: 100%;
+}
+
+a {
+    color: inherit;
+    text-decoration: none;
+}
+
+button {
+    font: inherit;
+}
+
+:focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        transition-duration: 0.01ms !important;
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+    }
+}
+
+
+/* 3. Utilities
+   -------------------------------------------------------------------------- */
+
+/* Keeps content at a consistent width with equal side padding on every screen. */
+.container {
+    width: 100%;
+    max-width: calc(var(--content-max-width) + var(--container-padding) * 2);
+    margin-inline: auto;
+    padding-inline: var(--container-padding);
+}
+
+/* Hidden on screen but still read by screen readers. */
+.visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+}
+
+/* Hidden until a keyboard user presses Tab, then lets them jump past the navbar. */
+.skip-link {
+    position: absolute;
+    top: var(--space-4);
+    left: var(--space-4);
+    z-index: 100;
+    padding: var(--space-2) var(--space-4);
+    border-radius: var(--radius-pill);
+    background-color: var(--color-navy-900);
+    color: var(--color-white);
+    font-size: var(--font-size-sm);
+    transform: translateY(-200%);
+}
+
+.skip-link:focus {
+    transform: none;
+}
+
+
+/* 4. Buttons
+   -------------------------------------------------------------------------- */
+
+.button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-2);
+    min-height: 2.75rem;   /* 44px — comfortable touch target */
+    padding: 0 var(--space-5);
+    border: 1px solid transparent;
+    border-radius: var(--radius-pill);
+    font-size: var(--font-size-sm);
+    font-weight: 500;
+    line-height: 1;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: background-color var(--transition-fast),
+                border-color var(--transition-fast),
+                color var(--transition-fast);
+}
+
+.button-large {
+    gap: var(--space-3);
+    min-height: 3.5rem;
+    padding: 0 var(--space-6);
+    font-size: var(--font-size-md);
+}
+
+.button-dark {
+    background-color: var(--color-navy-900);
+    color: var(--color-white);
+}
+
+.button-dark:hover {
+    background-color: var(--color-navy-800);
+}
+
+.button-outline {
+    border-color: var(--color-border);
+    color: var(--color-navy-800);
+}
+
+.button-outline:hover {
+    border-color: var(--color-navy-800);
+    background-color: rgba(255, 255, 255, 0.5);
+}
+
+.button-light {
+    background-color: var(--color-white);
+    color: var(--color-navy-900);
+}
+
+.button-light:hover {
+    background-color: #e4e8fb;
+}
+
+.button-icon {
+    width: 1rem;
+    height: 1rem;
+    flex-shrink: 0;
+    transition: transform var(--transition-fast);
+}
+
+.button:hover .button-icon {
+    transform: translateX(2px);
+}
+
+
+/* 5. Shared headings
+   -------------------------------------------------------------------------- */
+
+/* Small uppercase label above a heading, followed by a thin line. */
+.section-eyebrow {
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+    font-size: var(--font-size-xs);
+    font-weight: 600;
+    letter-spacing: 0.2em;
+    line-height: 1.4;
+    text-transform: uppercase;
+    color: var(--color-navy-800);
+}
+
+.section-eyebrow::after {
+    content: "";
+    flex-shrink: 0;
+    width: 5rem;
+    height: 1px;
+    background-color: var(--color-border);
+}
+
+.section-eyebrow--centered {
+    justify-content: center;
+}
+
+.section-eyebrow--centered::after {
+    display: none;
+}
+
+.section-title {
+    margin-top: var(--space-4);
+    font-size: var(--font-size-h2);
+    font-weight: 500;
+    line-height: 1.12;
+    letter-spacing: -0.015em;
+    color: var(--color-navy-900);
+}
+
+.section-title-accent {
+    display: block;
+    color: var(--color-accent);
+}
+
+.section-title--accent {
+    color: var(--color-accent);
+}
+
+
+/* 6. Brand logo (used in the navbar and the footer)
+   -------------------------------------------------------------------------- */
+
+.brand-logo {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-3);
+    flex-shrink: 0;
+    color: var(--color-navy-800);
+}
+
+.brand-logo-icon {
+    width: 2.25rem;
+    height: 2.25rem;
+}
+
+.brand-logo-text {
+    font-size: 1.375rem;
+    font-weight: 400;
+    letter-spacing: -0.01em;
+}
+
+.brand-logo--light {
+    color: var(--color-white);
+}
+
+
+/* 7. Navbar
+   -------------------------------------------------------------------------- */
+
+/* Sits on top of the hero image instead of pushing it down. */
+.site-header {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 50;
+    padding-top: var(--space-3);
+}
+
+.navbar {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: var(--space-6);
+    min-height: 5.5rem;
+}
+
+.navbar-menu {
+    display: flex;
+    align-items: center;
+    flex: 1;
+}
+
+/* margin-inline: auto centers the links between the logo and the buttons. */
+.navbar-links {
+    display: flex;
+    align-items: center;
+    gap: var(--space-7);
+    margin-inline: auto;
+}
+
+.navbar-link {
+    position: relative;
+    display: inline-block;
+    padding-block: var(--space-2);
+    font-size: var(--font-size-md);
+    color: var(--color-text);
+    transition: color var(--transition-fast);
+}
+
+.navbar-link:hover {
+    color: var(--color-navy-900);
+}
+
+/* The underline under the active link. */
+.navbar-link::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: -0.375rem;
+    height: 2px;
+    border-radius: 2px;
+    background-color: var(--color-navy-800);
+    transform: scaleX(0);
+    transition: transform var(--transition-fast);
+}
+
+.navbar-link.is-active {
+    color: var(--color-navy-900);
+    font-weight: 500;
+}
+
+.navbar-link.is-active::after {
+    transform: scaleX(1);
+}
+
+.navbar-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+}
+
+/* The menu button only appears on small screens (see media query below). */
+.navbar-toggle {
+    display: none;
+}
+
+@media (max-width: 1100px) {
+    .navbar-links {
+        gap: var(--space-6);
+    }
+}
+
+/* Mobile: links and buttons move into a dropdown panel. */
+@media (max-width: 900px) {
+    .site-header {
+        padding-top: var(--space-2);
+    }
+
+    .navbar {
+        justify-content: space-between;
+        min-height: 4.5rem;
+    }
+
+    .brand-logo-icon {
+        width: 2rem;
+        height: 2rem;
+    }
+
+    .brand-logo-text {
+        font-size: 1.25rem;
+    }
+
+    .navbar-toggle {
+        display: inline-flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 5px;
+        width: 2.75rem;
+        height: 2.75rem;
+        padding: 0;
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-pill);
+        background-color: rgba(255, 255, 255, 0.5);
+        color: var(--color-navy-800);
+        cursor: pointer;
+    }
+
+    .navbar-toggle-bar {
+        width: 1.125rem;
+        height: 2px;
+        border-radius: 2px;
+        background-color: currentColor;
+        transition: transform var(--transition-fast), opacity var(--transition-fast);
+    }
+
+    /* Turn the three bars into an X while the menu is open. */
+    .navbar-toggle[aria-expanded="true"] .navbar-toggle-bar:nth-child(1) {
+        transform: translateY(7px) rotate(45deg);
+    }
+
+    .navbar-toggle[aria-expanded="true"] .navbar-toggle-bar:nth-child(2) {
+        opacity: 0;
+    }
+
+    .navbar-toggle[aria-expanded="true"] .navbar-toggle-bar:nth-child(3) {
+        transform: translateY(-7px) rotate(-45deg);
+    }
+
+    .navbar-menu {
+        display: none;
+        position: absolute;
+        top: calc(100% + var(--space-2));
+        left: var(--container-padding);
+        right: var(--container-padding);
+        flex-direction: column;
+        align-items: stretch;
+        gap: var(--space-5);
+        padding: var(--space-5);
+        border: 1px solid var(--color-border-subtle);
+        border-radius: var(--radius-lg);
+        background-color: rgba(255, 255, 255, 0.96);
+        box-shadow: var(--shadow-soft);
+    }
+
+    .navbar-menu.is-open {
+        display: flex;
+    }
+
+    .navbar-links {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0;
+        margin-inline: 0;
+    }
+
+    .navbar-links li + li {
+        border-top: 1px solid var(--color-border-subtle);
+    }
+
+    .navbar-link {
+        display: flex;
+        align-items: center;
+        min-height: 3rem;
+        font-size: var(--font-size-base);
+    }
+
+    .navbar-link::after {
+        right: auto;
+        bottom: var(--space-2);
+        width: var(--space-5);
+    }
+
+    .navbar-actions {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: var(--space-3);
+    }
+
+    .navbar-actions .button {
+        min-height: 3rem;
+    }
+}
+
+
+/* 8. Hero
+   -------------------------------------------------------------------------- */
+
+.hero-section {
+    position: relative;
+    isolation: isolate;   /* keeps the hero's background layers inside the hero */
+    padding-top: calc(var(--header-height) + clamp(var(--space-6), 5vw, 5rem));
+}
+
+/* Soft light in the upper-left, like the bright station interior in the design. */
+.hero-section::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -2;
+    background:
+        radial-gradient(ellipse 55% 70% at 12% 18%, rgba(255, 255, 255, 0.95), transparent 70%),
+        linear-gradient(180deg, #f3f4fc 0%, var(--color-page) 100%);
+}
+
+.hero-text {
+    max-width: 33rem;
+}
+
+.hero-title {
+    margin-top: var(--space-5);
+    font-size: var(--font-size-display);
+    font-weight: 500;
+    line-height: 1.06;
+    letter-spacing: -0.02em;
+    color: var(--color-navy-900);
+}
+
+.hero-title-accent {
+    display: block;
+    color: var(--color-accent);
+}
+
+.hero-description {
+    max-width: 27rem;
+    margin-top: var(--space-6);
+    font-size: var(--font-size-lead);
+    line-height: 1.55;
+    color: var(--color-text);
+}
+
+.hero-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-5);
+    margin-top: var(--space-6);
+}
+
+/* The station image fills the right side and fades into the page on its edges.
+   The two masks are combined so both the left and the top/bottom edges fade. */
+.hero-visual {
+    position: absolute;
+    top: 5.5rem;
+    right: 0;
+    bottom: 3rem;
+    z-index: -1;
+    width: 60%;
+    -webkit-mask-image:
+        linear-gradient(to right, transparent 0%, #000 18%),
+        linear-gradient(to bottom, transparent 0%, #000 12%, #000 82%, transparent 100%);
+    -webkit-mask-composite: source-in;
+    mask-image:
+        linear-gradient(to right, transparent 0%, #000 18%),
+        linear-gradient(to bottom, transparent 0%, #000 12%, #000 82%, transparent 100%);
+    mask-composite: intersect;
+}
+
+.hero-visual-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: 30% 60%;
+}
+
+/* Small "scroll down" mouse between the buttons and the feature bar. */
+.hero-scroll {
+    display: flex;
+    justify-content: center;
+    width: 1.625rem;
+    height: 2.625rem;
+    margin: var(--space-7) auto var(--space-3);
+    padding-top: var(--space-2);
+    border: 1.5px solid rgba(28, 37, 80, 0.28);
+    border-radius: var(--radius-pill);
+    background-color: rgba(255, 255, 255, 0.35);
+    color: var(--color-navy-800);
+}
+
+.hero-scroll-icon {
+    width: 0.75rem;
+    height: 0.75rem;
+    animation: scroll-hint 2s ease-in-out infinite;
+}
+
+@keyframes scroll-hint {
+    0%, 100% { transform: translateY(0); opacity: 0.9; }
+    50%      { transform: translateY(6px); opacity: 0.4; }
+}
+
+/* Tablet and mobile: text first, then the image as its own full-width block. */
+@media (max-width: 900px) {
+    .hero-section {
+        padding-top: calc(var(--header-height) + var(--space-6));
+    }
+
+    .hero-text {
+        max-width: 36rem;
+    }
+
+    .hero-visual {
+        position: relative;
+        top: auto;
+        bottom: auto;
+        width: 100%;
+        aspect-ratio: 594 / 385;
+        max-height: 30rem;
+        margin-top: var(--space-6);
+        -webkit-mask-image: linear-gradient(to bottom, transparent 0%, #000 15%, #000 75%, transparent 100%);
+        mask-image: linear-gradient(to bottom, transparent 0%, #000 15%, #000 75%, transparent 100%);
+    }
+
+    .hero-scroll {
+        display: none;
+    }
+}
+
+@media (max-width: 600px) {
+    .hero-actions {
+        gap: var(--space-3);
+    }
+
+    .hero-actions .button {
+        flex: 1 1 10rem;
+    }
+}
+
+
+/* 9. Feature bar
+   -------------------------------------------------------------------------- */
+
+.feature-bar {
+    position: relative;
+    border: 1px solid var(--color-glass-border);
+    border-radius: var(--radius-lg);
+    background-color: var(--color-glass);
+    -webkit-backdrop-filter: blur(16px);
+    backdrop-filter: blur(16px);
+    box-shadow: var(--shadow-card);
+}
+
+.feature-list {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    padding: var(--space-5) var(--space-4);
+}
+
+.feature-item {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-5);
+    padding: var(--space-1) var(--space-4);
+}
+
+/* Thin vertical divider between items. */
+.feature-item + .feature-item::before {
+    content: "";
+    position: absolute;
+    top: 15%;
+    bottom: 15%;
+    left: 0;
+    width: 1px;
+    background-color: var(--color-border);
+}
+
+.feature-icon {
+    width: 2.5rem;
+    height: 2.5rem;
+    flex-shrink: 0;
+    color: var(--color-navy-800);
+}
+
+.feature-title {
+    font-size: var(--font-size-md);
+    font-weight: 500;
+    line-height: 1.3;
+    color: var(--color-navy-900);
+}
+
+.feature-text {
+    margin-top: 2px;
+    font-size: 0.8125rem;
+    line-height: 1.4;
+    color: var(--color-text-muted);
+}
+
+@media (max-width: 1100px) {
+    .feature-item {
+        gap: var(--space-3);
+        padding-inline: var(--space-3);
+    }
+
+    .feature-icon {
+        width: 2.125rem;
+        height: 2.125rem;
+    }
+}
+
+/* Tablet: 2 × 2 grid. The image above slides under the bar. */
+@media (max-width: 900px) {
+    .feature-bar {
+        margin-top: calc(var(--space-8) * -1);
+    }
+
+    .feature-list {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        padding: var(--space-2) var(--space-4);
+    }
+
+    .feature-item {
+        justify-content: flex-start;
+        padding: var(--space-4);
+    }
+
+    .feature-item:nth-child(3)::before {
+        display: none;
+    }
+
+    .feature-item:nth-child(n + 3) {
+        border-top: 1px solid var(--color-border-subtle);
+    }
+}
+
+/* Mobile: icon above the text so the 2 × 2 grid still fits. */
+@media (max-width: 600px) {
+    .feature-bar {
+        margin-top: calc(var(--space-6) * -1);
+    }
+
+    .feature-list {
+        padding-inline: var(--space-2);
+    }
+
+    .feature-item {
+        flex-direction: column;
+        justify-content: flex-start;
+        gap: var(--space-2);
+        padding: var(--space-4) var(--space-2);
+        text-align: center;
+    }
+
+    .feature-title {
+        font-size: var(--font-size-sm);
+    }
+
+    .feature-text {
+        font-size: var(--font-size-xs);
+    }
+}
+
+
+/* 10. How It Works
+   -------------------------------------------------------------------------- */
+
+.workflow-section {
+    padding-top: clamp(var(--space-7), 5vw, 4.5rem);
+    padding-bottom: var(--space-6);
+}
+
+.workflow-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 27rem) minmax(0, 1fr);
+    align-items: center;
+    gap: var(--space-8);
+}
+
+.workflow-description {
+    max-width: 23rem;
+    margin-top: var(--space-5);
+}
+
+.workflow-intro .button {
+    margin-top: var(--space-6);
+}
+
+.workflow-steps {
+    --step-icon-size: 7.5rem;
+
+    position: relative;
+    isolation: isolate;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    padding: var(--space-7) var(--space-5);
+}
+
+/* The soft rounded "orbit" outline behind the three steps. */
+.workflow-steps::before {
+    content: "";
+    position: absolute;
+    inset: 0 -1rem 0 -2.5rem;
+    z-index: -1;
+    border: 1px solid rgba(255, 255, 255, 0.9);
+    border-radius: var(--radius-pill);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.35), rgba(255, 255, 255, 0.05));
+    box-shadow: 0 0 0 1px rgba(74, 95, 193, 0.05);
+}
+
+.workflow-step {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding-inline: var(--space-2);
+    text-align: center;
+}
+
+/* Connector line from this step's circle to the next one. */
+.workflow-step:not(:last-child)::after {
+    content: "";
+    position: absolute;
+    top: calc(var(--step-icon-size) / 2);
+    left: calc(50% + var(--step-icon-size) / 2 + var(--space-4));
+    width: calc(100% - var(--step-icon-size) - var(--space-4) * 2);
+    height: 1px;
+    background-color: rgba(74, 95, 193, 0.3);
+}
+
+.workflow-icon {
+    position: relative;
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+    width: var(--step-icon-size);
+    height: var(--step-icon-size);
+    border: 1px solid rgba(255, 255, 255, 0.95);
+    border-radius: 50%;
+    background: radial-gradient(circle at 50% 35%, #ffffff 0%, rgba(238, 241, 252, 0.9) 70%);
+    box-shadow:
+        0 0 0 6px rgba(255, 255, 255, 0.35),
+        0 14px 32px rgba(74, 95, 193, 0.14);
+    color: var(--color-accent);
+}
+
+.workflow-icon svg {
+    width: 2.75rem;
+    height: 2.75rem;
+}
+
+.workflow-number {
+    position: absolute;
+    top: -0.25rem;
+    left: 62%;
+    display: grid;
+    place-items: center;
+    width: 1.5rem;
+    height: 1.5rem;
+    border-radius: 50%;
+    background-color: var(--color-accent);
+    box-shadow: 0 0 0 3px var(--color-page);
+    font-size: var(--font-size-xs);
+    font-weight: 600;
+    color: var(--color-white);
+}
+
+.workflow-step-title {
+    margin-top: var(--space-5);
+    font-size: var(--font-size-h3);
+    font-weight: 500;
+    line-height: 1.3;
+    color: var(--color-navy-900);
+}
+
+.workflow-step-text {
+    max-width: 12rem;
+    margin: var(--space-2) auto 0;
+    font-size: var(--font-size-sm);
+    line-height: 1.5;
+    color: var(--color-text-muted);
+}
+
+/* Tablet: intro text on top, the three steps full-width below. */
+@media (max-width: 1100px) {
+    .workflow-layout {
+        grid-template-columns: minmax(0, 1fr);
+        gap: var(--space-7);
+    }
+
+    .workflow-intro {
+        max-width: 36rem;
+    }
+
+    .workflow-steps::before {
+        inset: 0;
+    }
+}
+
+@media (max-width: 900px) {
+    .workflow-steps {
+        --step-icon-size: 6rem;
+        padding-inline: var(--space-2);
+    }
+
+    .workflow-icon svg {
+        width: 2.25rem;
+        height: 2.25rem;
+    }
+}
+
+/* Mobile: steps become a vertical list — icon on the left, text on the right. */
+@media (max-width: 600px) {
+    .workflow-steps {
+        --step-icon-size: 4.5rem;
+        grid-template-columns: minmax(0, 1fr);
+        row-gap: var(--space-6);
+        padding: var(--space-6) var(--space-5);
+    }
+
+    .workflow-steps::before {
+        border-radius: var(--radius-xl);
+    }
+
+    .workflow-step {
+        flex-direction: row;
+        align-items: center;
+        gap: var(--space-5);
+        padding-inline: 0;
+        text-align: left;
+    }
+
+    .workflow-step:not(:last-child)::after {
+        top: calc(var(--step-icon-size) + var(--space-2));
+        left: calc(var(--step-icon-size) / 2);
+        width: 1px;
+        height: calc(var(--space-6) - var(--space-4));
+    }
+
+    .workflow-icon svg {
+        width: 1.875rem;
+        height: 1.875rem;
+    }
+
+    .workflow-number {
+        top: -0.375rem;
+        left: auto;
+        right: -0.375rem;
+    }
+
+    .workflow-step-title {
+        margin-top: 0;
+    }
+
+    .workflow-step-text {
+        max-width: none;
+        margin-inline: 0;
+    }
+}
+
+
+/* 11. Advanced Care
+   -------------------------------------------------------------------------- */
+
+.care-section {
+    --care-visual-width: min(66vw, 72rem);
+    --care-visual-offset: 4rem;
+
+    position: relative;
+    isolation: isolate;
+    /* Tall enough for the astronaut image (664 × 305 ratio) minus the part that rises above. */
+    min-height: calc(var(--care-visual-width) * 305 / 664 - var(--care-visual-offset));
+    padding-top: var(--space-6);
+    padding-bottom: var(--space-7);
+}
+
+.care-content {
+    max-width: 25rem;
+}
+
+.care-tagline {
+    margin-top: var(--space-5);
+    font-size: var(--font-size-lead);
+    color: var(--color-navy-900);
+}
+
+.care-list {
+    display: grid;
+    gap: var(--space-1);
+    margin-top: var(--space-5);
+}
+
+.care-list-item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    color: var(--color-text);
+}
+
+.care-check {
+    width: 1.125rem;
+    height: 1.125rem;
+    flex-shrink: 0;
+    color: var(--color-navy-800);
+}
+
+/* The astronaut sits on the right, bleeding to the screen edge, and rises
+   slightly into the How It Works section above. */
+.care-visual {
+    position: absolute;
+    top: calc(var(--care-visual-offset) * -1);
+    right: 0;
+    z-index: -1;
+    width: var(--care-visual-width);
+    aspect-ratio: 664 / 305;
+    -webkit-mask-image:
+        linear-gradient(to right, transparent 0%, #000 30%),
+        linear-gradient(to bottom, transparent 0%, #000 18%, #000 80%, transparent 100%);
+    -webkit-mask-composite: source-in;
+    mask-image:
+        linear-gradient(to right, transparent 0%, #000 30%),
+        linear-gradient(to bottom, transparent 0%, #000 18%, #000 80%, transparent 100%);
+    mask-composite: intersect;
+}
+
+.care-visual img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* Tablet and mobile: image moves below the text at full width. */
+@media (max-width: 900px) {
+    .care-section {
+        min-height: 0;
+        padding-top: var(--space-8);
+        padding-bottom: 0;
+    }
+
+    .care-visual {
+        position: relative;
+        top: auto;
+        width: 100%;
+        margin-top: var(--space-5);
+        -webkit-mask-image: linear-gradient(to bottom, transparent 0%, #000 18%, #000 78%, transparent 100%);
+        mask-image: linear-gradient(to bottom, transparent 0%, #000 18%, #000 78%, transparent 100%);
+    }
+}
+
+
+/* 12. Testimonials
+   -------------------------------------------------------------------------- */
+
+.testimonials-section {
+    padding-top: var(--space-2);
+    text-align: center;
+}
+
+.testimonials-title {
+    margin-top: var(--space-3);
+    font-size: var(--font-size-h2-small);
+    font-weight: 500;
+    line-height: 1.2;
+    letter-spacing: -0.01em;
+    color: var(--color-navy-900);
+}
+
+.testimonial-track {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--space-6);
+    margin-top: var(--space-6);
+    text-align: left;
+}
+
+.testimonial-card {
+    display: flex;
+    align-items: center;
+    gap: var(--space-5);
+    min-height: 8.75rem;
+    padding: var(--space-5) var(--space-6);
+    border: 1px solid var(--color-glass-border);
+    border-radius: var(--radius-lg);
+    background-color: rgba(255, 255, 255, 0.45);
+    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(12px);
+    box-shadow: var(--shadow-card);
+}
+
+.testimonial-avatar {
+    display: grid;
+    place-items: end center;
+    flex-shrink: 0;
+    width: 4.5rem;
+    height: 4.5rem;
+    overflow: hidden;
+    border: 3px solid rgba(255, 255, 255, 0.9);
+    border-radius: 50%;
+    background: linear-gradient(145deg, #e3e7f7, #c8cfee);
+    box-shadow: 0 6px 16px rgba(40, 55, 120, 0.12);
+    color: rgba(28, 37, 80, 0.3);
+}
+
+.testimonial-avatar svg {
+    width: 3.25rem;
+    height: 3.25rem;
+}
+
+.testimonial-quote {
+    font-size: var(--font-size-md);
+    line-height: 1.5;
+    color: var(--color-navy-900);
+}
+
+.testimonial-name {
+    display: block;
+    margin-top: var(--space-3);
+    font-size: var(--font-size-sm);
+    font-weight: 500;
+    color: var(--color-navy-900);
+}
+
+.testimonial-role {
+    display: block;
+    font-size: var(--font-size-xs);
+    color: var(--color-text-muted);
+}
+
+/* Placeholder cards are visibly muted so nobody mistakes them for real reviews. */
+.testimonial-card.is-placeholder .testimonial-quote,
+.testimonial-card.is-placeholder .testimonial-name {
+    color: var(--color-text-muted);
+    font-style: italic;
+}
+
+.testimonial-dots {
+    display: flex;
+    justify-content: center;
+    gap: var(--space-3);
+    margin-top: var(--space-5);
+}
+
+.testimonial-dot {
+    position: relative;
+    width: 0.5rem;
+    height: 0.5rem;
+    padding: 0;
+    border: 1px solid var(--color-accent);
+    border-radius: 50%;
+    background-color: transparent;
+    cursor: pointer;
+}
+
+/* Invisible larger hit area so the small dots are easy to tap. */
+.testimonial-dot::before {
+    content: "";
+    position: absolute;
+    inset: -0.75rem;
+}
+
+.testimonial-dot.is-active {
+    border-color: var(--color-navy-900);
+    background-color: var(--color-navy-900);
+}
+
+@media (max-width: 1100px) {
+    .testimonial-track {
+        gap: var(--space-4);
+    }
+
+    .testimonial-card {
+        padding: var(--space-5);
+        gap: var(--space-4);
+    }
+
+    .testimonial-avatar {
+        width: 3.75rem;
+        height: 3.75rem;
+    }
+}
+
+/* Tablet and mobile: cards become a swipeable row that snaps to each card. */
+@media (max-width: 900px) {
+    .testimonial-track {
+        display: flex;
+        margin-inline: calc(var(--container-padding) * -1);
+        padding: var(--space-2) var(--container-padding) var(--space-5);
+        overflow-x: auto;
+        scroll-snap-type: x mandatory;
+        scroll-padding-inline: var(--container-padding);
+        scrollbar-width: none;
+    }
+
+    .testimonial-track::-webkit-scrollbar {
+        display: none;
+    }
+
+    .testimonial-card {
+        flex: 0 0 min(85%, 24rem);
+        scroll-snap-align: start;
+    }
+
+    .testimonial-dots {
+        margin-top: var(--space-2);
+    }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+    .testimonial-track {
+        scroll-behavior: smooth;
+    }
+}
+
+
+/* 13. CTA banner
+   -------------------------------------------------------------------------- */
+
+/* Sits above the footer so the footer's curved top can slide underneath it. */
+.cta-section {
+    position: relative;
+    z-index: 2;
+    padding-top: var(--space-7);
+}
+
+.cta-banner {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    gap: var(--space-5);
+    min-height: 7rem;
+    padding: var(--space-5) var(--space-7) var(--space-5) var(--space-9);
+    border: 1px solid rgba(150, 175, 255, 0.3);
+    border-radius: var(--radius-xl);
+    background: linear-gradient(100deg, #0f1839 0%, #141f4a 50%, #1b2a62 100%);
+    box-shadow: 0 24px 48px rgba(12, 20, 51, 0.25);
+    color: var(--color-white);
+}
+
+/* Earth's glowing horizon curving up on the right side of the banner. */
+.cta-banner::before {
+    content: "";
+    position: absolute;
+    z-index: -1;
+    top: 38%;
+    left: 38%;
+    width: 85%;
+    height: 280%;
+    border-top: 1.5px solid rgba(170, 196, 255, 0.85);
+    border-radius: 50%;
+    background: radial-gradient(ellipse 60% 25% at 50% 0%, rgba(110, 140, 235, 0.55), rgba(40, 60, 140, 0.2) 50%, transparent 80%);
+    box-shadow: 0 -10px 40px rgba(110, 140, 255, 0.35);
+    transform: rotate(-9deg);
+}
+
+/* Faint "+" sparkle on the far left. */
+.cta-banner::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: var(--space-6);
+    width: 0.875rem;
+    height: 0.875rem;
+    background:
+        linear-gradient(rgba(255, 255, 255, 0.25), rgba(255, 255, 255, 0.25)) center / 1px 100% no-repeat,
+        linear-gradient(rgba(255, 255, 255, 0.25), rgba(255, 255, 255, 0.25)) center / 100% 1px no-repeat;
+    transform: translateY(-50%);
+}
+
+.cta-star {
+    width: 2.75rem;
+    height: 2.75rem;
+    flex-shrink: 0;
+    margin-left: calc(var(--space-6) * -1);
+    filter: drop-shadow(0 0 10px rgba(160, 190, 255, 0.9));
+}
+
+.cta-title {
+    font-size: clamp(1.25rem, 1.1rem + 0.5vw, 1.4375rem);
+    font-weight: 400;
+    line-height: 1.3;
+}
+
+.cta-text {
+    margin-top: var(--space-1);
+    font-size: var(--font-size-md);
+    color: rgba(255, 255, 255, 0.75);
+}
+
+.cta-banner .button {
+    margin-left: auto;
+}
+
+/* Tablet and mobile: everything stacks and centers. */
+@media (max-width: 900px) {
+    .cta-banner {
+        flex-direction: column;
+        gap: var(--space-4);
+        padding: var(--space-7) var(--space-5);
+        text-align: center;
+    }
+
+    .cta-banner::before {
+        top: 62%;
+        left: -20%;
+        width: 140%;
+        transform: rotate(-4deg);
+    }
+
+    .cta-banner::after {
+        top: var(--space-6);
+        transform: none;
+    }
+
+    .cta-star {
+        margin-left: 0;
+    }
+
+    .cta-banner .button {
+        margin: var(--space-2) 0 0;
+        width: 100%;
+        max-width: 20rem;
+    }
+}
+
+
+/* 14. Footer
+   -------------------------------------------------------------------------- */
+
+/* The curved dark top slides under the CTA banner (negative margin) like
+   the planet's horizon in the design. */
+.site-footer {
+    --footer-overlap: 3.5rem;
+
+    position: relative;
+    margin-top: calc(var(--footer-overlap) * -1);
+    padding-top: calc(var(--footer-overlap) + var(--space-8));
+    padding-bottom: var(--space-7);
+    border-radius: 50% 50% 0 0 / var(--footer-overlap) var(--footer-overlap) 0 0;
+    background:
+        radial-gradient(ellipse 70% 60% at 50% 0%, rgba(70, 95, 190, 0.35), transparent 70%),
+        linear-gradient(180deg, #121c45 0%, var(--color-navy-950) 60%, #070c22 100%);
+    box-shadow:
+        0 -1px 0 rgba(150, 175, 255, 0.45),
+        0 -18px 50px rgba(90, 120, 220, 0.2);
+    color: rgba(255, 255, 255, 0.78);
+}
+
+/* A light scattering of stars. */
+.site-footer::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background-image:
+        radial-gradient(1px 1px at 8% 30%, rgba(255, 255, 255, 0.7), transparent),
+        radial-gradient(1px 1px at 22% 72%, rgba(255, 255, 255, 0.5), transparent),
+        radial-gradient(1.5px 1.5px at 35% 45%, rgba(255, 255, 255, 0.6), transparent),
+        radial-gradient(1px 1px at 51% 82%, rgba(255, 255, 255, 0.5), transparent),
+        radial-gradient(1px 1px at 63% 38%, rgba(255, 255, 255, 0.7), transparent),
+        radial-gradient(1.5px 1.5px at 77% 66%, rgba(255, 255, 255, 0.5), transparent),
+        radial-gradient(1px 1px at 88% 28%, rgba(255, 255, 255, 0.6), transparent),
+        radial-gradient(1px 1px at 94% 78%, rgba(255, 255, 255, 0.5), transparent);
+    pointer-events: none;
+}
+
+.site-footer .container {
+    position: relative;
+}
+
+.footer-main {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    gap: var(--space-6);
+}
+
+.footer-main .brand-logo {
+    justify-self: start;
+}
+
+.footer-links {
+    display: flex;
+    gap: var(--space-7);
+}
+
+.footer-link {
+    font-size: var(--font-size-md);
+    transition: color var(--transition-fast);
+}
+
+.footer-link:hover {
+    color: var(--color-white);
+}
+
+.footer-social {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--space-3);
+}
+
+.footer-social-link {
+    display: grid;
+    place-items: center;
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: 50%;
+    transition: color var(--transition-fast), background-color var(--transition-fast);
+}
+
+.footer-social-link:hover {
+    background-color: rgba(255, 255, 255, 0.08);
+    color: var(--color-white);
+}
+
+.footer-social-link svg {
+    width: 1.375rem;
+    height: 1.375rem;
+}
+
+/* Copyright line with a thin rule on each side. */
+.footer-bottom {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    gap: var(--space-6);
+    margin-top: var(--space-7);
+    font-size: 0.8125rem;
+    color: rgba(255, 255, 255, 0.55);
+}
+
+.footer-bottom::before,
+.footer-bottom::after {
+    content: "";
+    height: 1px;
+    background-color: rgba(255, 255, 255, 0.14);
+}
+
+@media (max-width: 1100px) {
+    .footer-links {
+        gap: var(--space-5);
+    }
+}
+
+/* Tablet and mobile: logo, links and icons stack in the center. */
+@media (max-width: 900px) {
+    .site-footer {
+        --footer-overlap: 2.5rem;
+    }
+
+    .footer-main {
+        grid-template-columns: minmax(0, 1fr);
+        justify-items: center;
+        gap: var(--space-5);
+    }
+
+    .footer-main .brand-logo {
+        justify-self: center;
+    }
+
+    .footer-links {
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: var(--space-2) var(--space-5);
+    }
+
+    .footer-social {
+        justify-content: center;
+    }
+
+    .footer-bottom {
+        gap: var(--space-4);
+        text-align: center;
+    }
+}
+
+
+/* 15. Scroll reveal
+   Sections fade up gently as they scroll into view. Only active when
+   JavaScript is running, so the content is never hidden without it.
+   -------------------------------------------------------------------------- */
+
+.js [data-reveal] {
+    opacity: 0;
+    transform: translateY(1.25rem);
+    transition: opacity 0.7s ease, transform 0.7s ease;
+}
+
+.js [data-reveal].is-visible {
+    opacity: 1;
+    transform: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .js [data-reveal] {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+
+/* 16. Welcome modal
+   Built on the native <dialog> element: the browser handles focus and Escape.
+   The dialog itself fills the screen (the overlay); .modal-content is the card.
+   -------------------------------------------------------------------------- */
+
+/* Stops the page behind from scrolling; the gutter keeps the layout from shifting. */
+html.has-modal-open {
+    overflow: hidden;
+    scrollbar-gutter: stable;
+}
+
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    max-width: none;
+    max-height: none;
+    margin: 0;
+    padding: var(--container-padding);
+    border: 0;
+    background: transparent;
+    color: var(--color-text);
+    overflow-y: auto;
+}
+
+/* minmax(0, 1fr) gives the card a real column width, so it can never be wider than the screen. */
+.modal-overlay[open] {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+}
+
+/* margin: auto centers the card, and still lets it scroll on very short screens. */
+.modal-overlay .modal-content {
+    margin: auto;
+}
+
+/* The blurred, softened page behind the card. */
+.modal-overlay::backdrop {
+    background-color: rgba(12, 20, 51, 0.35);
+    -webkit-backdrop-filter: blur(6px);
+    backdrop-filter: blur(6px);
+}
+
+.modal-content {
+    position: relative;
+    width: min(100%, 27rem);
+    padding: var(--space-7) var(--space-7) var(--space-6);
+    border: 1px solid rgba(255, 255, 255, 0.9);
+    border-radius: var(--radius-lg);
+    background-color: rgba(246, 247, 254, 0.86);
+    -webkit-backdrop-filter: blur(20px);
+    backdrop-filter: blur(20px);
+    box-shadow:
+        0 30px 80px rgba(12, 20, 51, 0.25),
+        0 0 0 1px rgba(74, 95, 193, 0.06);
+    text-align: center;
+}
+
+.modal-close {
+    position: absolute;
+    top: var(--space-4);
+    right: var(--space-4);
+    display: grid;
+    place-items: center;
+    width: 2.5rem;
+    height: 2.5rem;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: transparent;
+    color: var(--color-text-muted);
+    cursor: pointer;
+    transition: background-color var(--transition-fast), color var(--transition-fast);
+}
+
+.modal-close:hover {
+    background-color: rgba(28, 37, 80, 0.06);
+    color: var(--color-navy-900);
+}
+
+.modal-close svg {
+    width: 1rem;
+    height: 1rem;
+}
+
+.modal-logo {
+    width: 2.5rem;
+    height: 2.5rem;
+    margin-inline: auto;
+    color: var(--color-navy-800);
+    filter: drop-shadow(0 4px 12px rgba(74, 95, 193, 0.35));
+}
+
+.modal-title {
+    margin-top: var(--space-5);
+    font-size: clamp(1.5rem, 1.3rem + 0.6vw, 1.75rem);
+    font-weight: 500;
+    line-height: 1.2;
+    letter-spacing: -0.01em;
+    color: var(--color-navy-900);
+}
+
+.modal-text {
+    margin-top: var(--space-2);
+    text-wrap: balance;   /* splits into two even lines instead of leaving one word alone */
+    font-size: var(--font-size-md);
+    color: var(--color-text-muted);
+}
+
+.modal-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-3);
+    margin-top: var(--space-6);
+}
+
+/* Open: soft fade + slight scale up. Closing: the reverse (class added by main.js). */
+.modal-overlay[open] .modal-content {
+    animation: modal-content-in 0.28s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.modal-overlay[open]::backdrop {
+    animation: modal-backdrop-in 0.28s ease;
+}
+
+.modal-overlay.is-closing .modal-content {
+    animation: modal-content-out 0.18s ease forwards;
+}
+
+.modal-overlay.is-closing::backdrop {
+    animation: modal-backdrop-out 0.18s ease forwards;
+}
+
+@keyframes modal-content-in {
+    from { opacity: 0; transform: translateY(0.5rem) scale(0.96); }
+}
+
+@keyframes modal-content-out {
+    to { opacity: 0; transform: translateY(0.25rem) scale(0.97); }
+}
+
+@keyframes modal-backdrop-in {
+    from { opacity: 0; }
+}
+
+@keyframes modal-backdrop-out {
+    to { opacity: 0; }
+}
+
+@media (max-width: 600px) {
+    .modal-content {
+        padding: var(--space-7) var(--space-5) var(--space-5);
+    }
+}
+
+/* Very narrow phones: stack the two buttons. */
+@media (max-width: 380px) {
+    .modal-actions {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
+
+/* 17. Login modal
+   Reuses the shared modal overlay (section 16) and only styles the card and form.
+   -------------------------------------------------------------------------- */
+
+.login-modal {
+    --color-login-navy: #13285f;
+    --color-login-blue: #3d58b0;
+    --color-login-text: #4a5c9c;
+    --color-login-border: rgba(140, 158, 215, 0.45);
+}
+
+/* A slightly stronger blue tint and blur than the welcome modal, as in the design. */
+.login-modal::backdrop {
+    background-color: rgba(20, 40, 120, 0.32);
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+}
+
+.login-modal-content {
+    width: min(100%, 32rem);
+    padding: var(--space-6) 2.5rem;
+    border: 1px solid rgba(255, 255, 255, 0.85);
+    border-radius: var(--radius-xl);
+    background: linear-gradient(160deg, rgba(241, 244, 255, 0.92), rgba(222, 229, 252, 0.88));
+    box-shadow:
+        0 40px 100px rgba(10, 25, 80, 0.35),
+        inset 0 1px 0 rgba(255, 255, 255, 0.9);
+    color: var(--color-login-navy);
+}
+
+.login-modal .modal-close {
+    top: var(--space-5);
+    right: var(--space-5);
+    color: var(--color-login-navy);
+}
+
+.login-modal .modal-close svg {
+    width: 1.375rem;
+    height: 1.375rem;
+}
+
+.login-modal-brand {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-3);
+    font-size: 1.375rem;
+    font-weight: 500;
+    letter-spacing: -0.01em;
+}
+
+.login-modal-logo {
+    width: 2.25rem;
+    height: 2.5rem;
+}
+
+.login-modal-title {
+    margin-top: var(--space-4);
+    font-size: clamp(2rem, 1.6rem + 1.4vw, 2.625rem);
+    font-weight: 600;
+    line-height: 1.1;
+    letter-spacing: -0.025em;
+}
+
+.login-modal-text {
+    margin-top: var(--space-2);
+    font-size: 1.0625rem;
+    color: var(--color-login-text);
+    text-wrap: balance;
+}
+
+.login-form {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);   /* fields shrink with the card instead of overflowing */
+    gap: var(--space-3);
+    margin-top: var(--space-6);
+}
+
+/* Pill-shaped field; the whole pill shows the focus ring when the input is focused. */
+.login-field {
+    display: flex;
+    align-items: center;
+    height: 2.875rem;
+    border: 1.5px solid var(--color-login-border);
+    border-radius: var(--radius-pill);
+    background-color: rgba(255, 255, 255, 0.45);
+    transition: border-color var(--transition-fast),
+                box-shadow var(--transition-fast),
+                background-color var(--transition-fast);
+}
+
+.login-field:focus-within {
+    border-color: var(--color-accent);
+    background-color: rgba(255, 255, 255, 0.7);
+    box-shadow: 0 0 0 3px rgba(74, 95, 193, 0.15);
+}
+
+.login-field-icon {
+    width: 1.375rem;
+    height: 1.375rem;
+    flex-shrink: 0;
+    margin-left: 1.25rem;
+}
+
+.login-input {
+    flex: 1;
+    width: 100%;
+    min-width: 0;
+    height: 100%;
+    padding: 0 var(--space-4) 0 1.25rem;
+    border: 0;
+    background: transparent;
+    font: inherit;
+    font-size: var(--font-size-base);
+    color: var(--color-navy-900);
+}
+
+/* The focus ring is drawn on .login-field instead (see :focus-within above). */
+.login-input:focus {
+    outline: none;
+}
+
+.login-input::placeholder {
+    color: #6a74a3;
+}
+
+.login-password-toggle {
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+    width: 2.5rem;
+    height: 2.5rem;
+    margin-right: var(--space-2);
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: transparent;
+    color: var(--color-login-navy);
+    cursor: pointer;
+}
+
+.login-password-toggle svg {
+    width: 1.375rem;
+    height: 1.375rem;
+}
+
+.login-password-toggle .icon-password-visible,
+.login-password-toggle[aria-pressed="true"] .icon-password-hidden {
+    display: none;
+}
+
+.login-password-toggle[aria-pressed="true"] .icon-password-visible {
+    display: block;
+}
+
+.login-message {
+    padding: var(--space-2) var(--space-4);
+    border-radius: var(--radius-md);
+    font-size: var(--font-size-sm);
+    text-align: left;
+}
+
+.login-message[data-tone="error"] {
+    background-color: rgba(190, 45, 70, 0.08);
+    color: #a12a3c;
+}
+
+.login-message[data-tone="info"] {
+    background-color: rgba(74, 95, 193, 0.1);
+    color: var(--color-login-navy);
+}
+
+.login-submit {
+    min-height: 2.875rem;
+    background-color: var(--color-login-navy);
+    font-size: 1.0625rem;
+    color: var(--color-white);
+}
+
+.login-submit:hover {
+    background-color: #1b3577;
+}
+
+.login-submit:disabled {
+    opacity: 0.7;
+    cursor: progress;
+}
+
+/* "or" with a thin line on each side. */
+.login-divider {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    gap: var(--space-4);
+    margin-block: var(--space-4);
+    font-size: var(--font-size-md);
+    color: var(--color-login-text);
+}
+
+.login-divider::before,
+.login-divider::after {
+    content: "";
+    height: 1px;
+    background-color: rgba(28, 37, 80, 0.15);
+}
+
+.login-social {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-3);
+}
+
+.login-social-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-3);
+    min-height: 2.9375rem;
+    padding: 0 var(--space-4);
+    border: 1.5px solid var(--color-login-border);
+    border-radius: var(--radius-pill);
+    background-color: rgba(255, 255, 255, 0.55);
+    font-size: var(--font-size-md);
+    font-weight: 500;
+    color: var(--color-login-navy);
+    white-space: nowrap;
+    cursor: pointer;
+    transition: background-color var(--transition-fast), border-color var(--transition-fast);
+}
+
+.login-social-button:hover {
+    border-color: rgba(140, 158, 215, 0.8);
+    background-color: rgba(255, 255, 255, 0.85);
+}
+
+.login-social-icon {
+    width: 1.375rem;
+    height: 1.375rem;
+    flex-shrink: 0;
+}
+
+.login-footer {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-2) var(--space-5);
+    margin-top: var(--space-6);
+    font-size: var(--font-size-md);
+}
+
+.login-footer-divider {
+    width: 1px;
+    height: 1.25rem;
+    background-color: rgba(28, 37, 80, 0.2);
+}
+
+.login-signup {
+    color: var(--color-login-text);
+}
+
+/* Text-style buttons ("Forgot password?", "Sign Up"). */
+.login-link {
+    padding: 0;
+    border: 0;
+    background: none;
+    font: inherit;
+    color: var(--color-login-blue);
+    cursor: pointer;
+}
+
+.login-link:hover {
+    text-decoration: underline;
+    text-underline-offset: 3px;
+}
+
+.login-link--strong {
+    margin-left: var(--space-1);
+    font-weight: 600;
+    color: #1f4fd8;
+}
+
+@media (max-width: 600px) {
+    .login-modal-content {
+        padding: var(--space-7) var(--space-5) var(--space-6);
+    }
+
+    .login-modal .modal-close {
+        top: var(--space-3);
+        right: var(--space-3);
+    }
+}
+
+/* Phones: the two social buttons stack so their labels never get cut off. */
+@media (max-width: 480px) {
+    .login-social {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .login-footer-divider {
+        display: none;
+    }
+}
+
+
+/* 18. Language switch & right-to-left (Arabic)
+   The landing page was built with left/right positions; in Arabic (dir="rtl") each one is
+   mirrored here, so the text, images and decorations swap sides together.
+   -------------------------------------------------------------------------- */
+
+.lang-switch {
+    display: inline-flex;
+    align-items: center;
+    min-height: 2.25rem;
+    padding: 0 var(--space-3);
+    border-radius: var(--radius-pill);
+    font-size: var(--font-size-sm);
+    font-weight: 500;
+    color: inherit;
+    text-decoration: none;
+}
+
+.lang-switch:hover {
+    background-color: rgba(255, 255, 255, 0.45);
+}
+
+.lang-switch:focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+}
+
+/* Arabic letters are joined: letter spacing would break them apart. */
+:root[lang="ar"] body * {
+    letter-spacing: 0 !important;
+}
+
+/* Directional icons (arrows) point the other way. 'scale' combines with hover transforms. */
+[dir="rtl"] .flip-rtl {
+    scale: -1 1;
+}
+
+span.flip-rtl {
+    display: inline-block;
+}
+
+[dir="rtl"] .skip-link {
+    left: auto;
+    right: var(--space-4);
+}
+
+[dir="rtl"] .hero-visual {
+    right: auto;
+    left: 0;
+    -webkit-mask-image:
+        linear-gradient(to left, transparent 0%, #000 18%),
+        linear-gradient(to bottom, transparent 0%, #000 12%, #000 82%, transparent 100%);
+    mask-image:
+        linear-gradient(to left, transparent 0%, #000 18%),
+        linear-gradient(to bottom, transparent 0%, #000 12%, #000 82%, transparent 100%);
+}
+
+/* The Arabic hero image (hero-station-ar.jpg) keeps its monitor on the left edge. */
+[dir="rtl"] .hero-visual-image {
+    object-position: left 60%;
+}
+
+/* Arabic typography, as in the Arabic design: "راقب. احمِ. ازدهر." on one line, bolder
+   headings, a little more line height for Arabic letter shapes. */
+[lang="ar"] .hero-title-accent {
+    display: inline;
+}
+
+[lang="ar"] .hero-title,
+[lang="ar"] .section-title,
+[lang="ar"] .cta-title {
+    font-weight: 600;
+    line-height: 1.3;
+}
+
+[lang="ar"] .feature-title,
+[lang="ar"] .workflow-step-title {
+    font-weight: 600;
+}
+
+[lang="ar"] .hero-description,
+[lang="ar"] .workflow-description {
+    line-height: 1.7;
+}
+
+[lang="ar"] .hero-title {
+    font-size: calc(var(--font-size-display) * 1.1);
+}
+
+[lang="ar"] .hero-description {
+    max-width: 25rem;
+    font-size: clamp(1.125rem, 1rem + 0.45vw, 1.375rem);
+}
+
+[dir="rtl"] .feature-item + .feature-item::before {
+    left: auto;
+    right: 0;
+}
+
+[dir="rtl"] .workflow-steps::before {
+    inset: 0 -2.5rem 0 -1rem;
+}
+
+[dir="rtl"] .workflow-step:not(:last-child)::after {
+    left: auto;
+    right: calc(50% + var(--step-icon-size) / 2 + var(--space-4));
+}
+
+[dir="rtl"] .workflow-number {
+    left: auto;
+    right: 62%;
+}
+
+[dir="rtl"] .care-visual {
+    right: auto;
+    left: 0;
+    -webkit-mask-image:
+        linear-gradient(to left, transparent 0%, #000 30%),
+        linear-gradient(to bottom, transparent 0%, #000 18%, #000 80%, transparent 100%);
+    mask-image:
+        linear-gradient(to left, transparent 0%, #000 30%),
+        linear-gradient(to bottom, transparent 0%, #000 18%, #000 80%, transparent 100%);
+}
+
+[dir="rtl"] .testimonial-track,
+[dir="rtl"] .login-message {
+    text-align: right;
+}
+
+[dir="rtl"] .cta-banner {
+    padding: var(--space-5) var(--space-9) var(--space-5) var(--space-7);
+}
+
+[dir="rtl"] .cta-banner::before {
+    left: auto;
+    right: 38%;
+    transform: rotate(9deg);
+}
+
+[dir="rtl"] .cta-banner::after {
+    left: auto;
+    right: var(--space-6);
+}
+
+[dir="rtl"] .cta-star {
+    margin-left: 0;
+    margin-right: calc(var(--space-6) * -1);
+}
+
+[dir="rtl"] .cta-banner .button {
+    margin-left: 0;
+    margin-right: auto;
+}
+
+[dir="rtl"] .modal-close,
+[dir="rtl"] .login-modal .modal-close {
+    right: auto;
+    left: var(--space-4);
+}
+
+[dir="rtl"] .login-modal .modal-close {
+    left: var(--space-5);
+}
+
+[dir="rtl"] .login-field-icon {
+    margin-left: 0;
+    margin-right: 1.25rem;
+}
+
+[dir="rtl"] .login-password-toggle {
+    margin-right: 0;
+    margin-left: var(--space-2);
+}
+
+[dir="rtl"] .login-link--strong {
+    margin-left: 0;
+    margin-right: var(--space-1);
+}
+
+@media (max-width: 900px) {
+    [dir="rtl"] .navbar-link::after {
+        left: auto;
+        right: 0;
+    }
+
+    [dir="rtl"] .workflow-step {
+        text-align: right;
+    }
+
+    [dir="rtl"] .workflow-step:not(:last-child)::after {
+        right: calc(var(--step-icon-size) / 2);
+    }
+
+    [dir="rtl"] .workflow-number {
+        right: auto;
+        left: -0.375rem;
+    }
+
+    [dir="rtl"] .cta-banner {
+        padding: var(--space-7) var(--space-5);
+    }
+
+    [dir="rtl"] .cta-banner::before {
+        right: -20%;
+        transform: rotate(4deg);
+    }
+
+    [dir="rtl"] .cta-star {
+        margin-right: 0;
+    }
+
+    [dir="rtl"] .cta-banner .button {
+        margin: var(--space-2) 0 0;
+    }
+}
+
+@media (max-width: 600px) {
+    [dir="rtl"] .login-modal .modal-close {
+        left: var(--space-3);
+    }
+}

@@ -1,0 +1,27 @@
+<?php
+// صفحة الإعدادات.
+return [
+    'settings.account' => 'الحساب',
+    'settings.name' => 'الاسم',
+    'settings.email' => 'البريد الإلكتروني',
+    'settings.role' => 'الدور',
+    'role.astronaut' => 'رائد فضاء',
+    'role.mission_admin' => 'مسؤول مهمة',
+    'settings.language' => 'اللغة',
+    'settings.language_hint' => 'اختر لغة التطبيق بالكامل. تُحفظ في حسابك وعلى هذا الجهاز.',
+    'settings.notifications_display' => 'الإشعارات والعرض',
+    'settings.in_app_alerts' => 'إشعارات التنبيهات داخل التطبيق',
+    'settings.in_app_alerts_hint' => 'إظهار شارة التنبيهات وبطاقاتها.',
+    'settings.alert_sound' => 'صوت التنبيه',
+    'settings.alert_sound_hint' => 'تشغيل صوت قصير عند ظهور تنبيه جديد.',
+    'settings.reduce_motion' => 'تقليل الحركة',
+    'settings.reduce_motion_hint' => 'إيقاف الحركات المتحركة في التطبيق.',
+    'settings.privacy' => 'الخصوصية',
+    'settings.privacy_text' => 'بياناتك الصحية مرئية لك فقط ولمسؤولي المهمات المعتمدين في المهمات التي تنتمي إليها. لا يستطيع رواد الفضاء الآخرون في مهمتك رؤية قياساتك أو تنبيهاتك — إلا في حالة طارئة، حين يسمع طاقمك اسمك والمشكلة ليتمكنوا من مساعدتك.',
+    'settings.privacy_audit' => 'كل اطلاع من مسؤول على البيانات الصحية للطاقم يُسجَّل في سجل التدقيق.',
+    'settings.security' => 'الأمان',
+    'settings.current_password' => 'كلمة المرور الحالية',
+    'settings.new_password' => 'كلمة المرور الجديدة',
+    'settings.change_password' => 'تغيير كلمة المرور',
+    'settings.password_changed' => 'تم تغيير كلمة المرور.',
+];

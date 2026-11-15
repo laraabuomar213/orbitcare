@@ -1,0 +1,25 @@
+<?php
+// صفحة الملف الشخصي.
+return [
+    'profile.your_details' => 'بياناتك',
+    'profile.full_name' => 'الاسم الكامل',
+    'profile.astronaut_id' => 'رقم رائد الفضاء',
+    'profile.age' => 'العمر',
+    'profile.height' => 'الطول (سم)',
+    'profile.weight' => 'الوزن (كغ)',
+    'profile.save' => 'حفظ التغييرات',
+    'profile.mission_data' => 'المهمة والبيانات',
+    'profile.none' => 'لا يوجد',
+    'profile.health_data' => 'البيانات الصحية',
+    'profile.data_source' => 'إعادة تشغيل البيانات المسجّلة للسجل {record} من {source} (المدة {duration})',
+    'profile.no_data_source' => 'لم يُربط أي مصدر بيانات',
+    'profile.medical_background' => 'الخلفية الطبية',
+    'profile.background_on_file' => 'محفوظة (تُشارك مع نظام التحليل فقط)',
+    'profile.background_missing' => 'لم تُقدَّم',
+    'profile.job_title' => 'المسمى الوظيفي',
+    'profile.organization' => 'الجهة',
+    'profile.access' => 'الصلاحية',
+    'profile.approved' => 'معتمد',
+    'profile.pending' => 'بانتظار الموافقة',
+    'profile.missions_managed' => 'المهمات التي تديرها',
+];

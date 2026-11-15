@@ -1,0 +1,25 @@
+<?php
+// Profile page.
+return [
+    'profile.your_details' => 'Your details',
+    'profile.full_name' => 'Full name',
+    'profile.astronaut_id' => 'Astronaut ID',
+    'profile.age' => 'Age',
+    'profile.height' => 'Height (cm)',
+    'profile.weight' => 'Weight (kg)',
+    'profile.save' => 'Save changes',
+    'profile.mission_data' => 'Mission and data',
+    'profile.none' => 'None',
+    'profile.health_data' => 'Health data',
+    'profile.data_source' => 'Recorded data replay of {record} from the {source} ({duration} long)',
+    'profile.no_data_source' => 'No data source assigned',
+    'profile.medical_background' => 'Medical background',
+    'profile.background_on_file' => 'On file (shared only with the analysis system)',
+    'profile.background_missing' => 'Not provided',
+    'profile.job_title' => 'Job title',
+    'profile.organization' => 'Organization',
+    'profile.access' => 'Access',
+    'profile.approved' => 'Approved',
+    'profile.pending' => 'Pending approval',
+    'profile.missions_managed' => 'Missions managed',
+];

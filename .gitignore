@@ -1,0 +1,28 @@
+# === Secrets — never commit ===
+.env
+.env.*
+!.env.example
+
+# === Runtime logs ===
+/logs/*
+!/logs/.gitkeep
+
+# === Downloaded third-party datasets & their derivatives ===
+# Not redistributed here. Regenerate locally — see data/README.md and the cli/ scripts:
+#   php cli/download-bidmc.php && php cli/build-waveforms.php && php cli/ingest-open-sensors.php
+/data/raw/
+/data/processed/
+
+# === Temporary / debug scratch files ===
+_dbg.html
+_check.html
+_login.html
+_stub.json
+*.tmp
+
+# === OS / editor noise ===
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/

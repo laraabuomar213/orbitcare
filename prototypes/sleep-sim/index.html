@@ -1,0 +1,1597 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Astronaut Sleep Simulation</title>
+<!-- OrbitCare — astronaut sleep simulation (standalone page).
+     Layout: Lara's design image — header, five-chapter stepper, one large scene card with a sensor card,
+     a single caption, three indicators, and a floating control bar. Everything else lives in "Science details".
+     Scene: matte white sculpted crew compartment (her earlier reference), night-blue ambience, glowing sensor dots.
+     One simulation engine drives everything; the story is the same on every run (seeded randomness, scripted
+     moment where a too-loud pulse wakes the astronaut and the assistant learns his volume).
+     Science: OrbitCare team research brief "Sleep waves, lighting & ISS systems" (Nov 2026) + the sources on the page.
+     All readings are simulated.
+     URL options: ?chapter=before|falling|deep|waking|morning · ?at=HH:MM · ?run · ?speed=10…900 · ?details
+                  ?warm=<frames> fast-forward before the first picture (screenshots)
+     Works offline: three.js r160 and the fonts are served from this project. -->
+<link rel="stylesheet" href="../../assets/css/fonts.css">
+<style>
+:root {
+    --navy: #1b2350; --ink: #1b2340; --text: #3a4263; --muted: #6b7393; --line: #e5e8f4;
+    --page: #f4f3fc; --card: #fff; --accent: #2f5fd8;
+    --lav: #6f5fd6; --lav-soft: #efedfc; --sky: #e9f2fd; --pink: #e2557a; --pink-soft: #fdebf0; --amber: #c9861a;
+    --font: "Lexend", "IBM Plex Sans Arabic", system-ui, sans-serif;
+    --gutter: clamp(16px, 4.5vw, 72px);
+}
+* { box-sizing: border-box; margin: 0; }
+body { min-height: 100vh; background: var(--page); color: var(--text); font-family: var(--font); }
+button { font: inherit; cursor: pointer; color: inherit; }
+[hidden] { display: none !important; }
+
+/* header */
+.hdr { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 1rem; padding: 0.9rem var(--gutter); background: rgba(255, 255, 255, 0.75); border-bottom: 1px solid #ecebf6; }
+.logo { display: flex; align-items: center; gap: 0.5rem; font-size: 1.4rem; font-weight: 600; color: var(--ink); }
+.logo svg { width: 1.7rem; height: 1.7rem; color: var(--lav); }
+.hdr h1 { font-size: clamp(1.1rem, 1.8vw, 1.6rem); font-weight: 500; color: var(--ink); text-align: center; }
+.hdr-end { justify-self: end; display: flex; align-items: center; gap: 0.6rem; }
+.chip-sim { padding: 0.45rem 1rem; border-radius: 999px; background: linear-gradient(180deg, #f7c871 0%, #eaa53f 100%); color: #5b3a00; font-size: 0.78rem; font-weight: 600; letter-spacing: 0.05em; box-shadow: 0 2px 8px rgba(234, 165, 63, 0.3); white-space: nowrap; }
+.lang { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.45rem 0.95rem; border: 1px solid #e3e5f0; border-radius: 999px; background: #fff; font-size: 0.9rem; }
+.lang svg { width: 0.8rem; height: 0.8rem; }
+
+/* chapter stepper */
+.stepper { position: relative; display: grid; grid-template-columns: repeat(5, 1fr); margin: 1.1rem calc(var(--gutter) + 8vw) 1rem; padding: 0; list-style: none; }
+.stepper::before, .stepper .fill { content: ""; position: absolute; top: 1rem; inset-inline-start: 10%; height: 2px; background: #dcdcea; }
+.stepper::before { inset-inline-end: 10%; }
+.stepper .fill { background: var(--lav); width: 0; transition: width 0.4s ease; z-index: 0; }
+.step { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; gap: 0.45rem; padding: 0; border: 0; background: none; color: #9a9fb8; font-size: 0.95rem; }
+.step i { display: grid; place-items: center; width: 2rem; height: 2rem; border-radius: 50%; border: 1.5px solid #c9cbe0; background: var(--page); }
+.step svg { width: 1rem; height: 1rem; }
+.step.done { color: #8a8fab; }
+.step.done i { border-color: var(--lav); color: var(--lav); background: #fff; }
+.step.now { color: var(--ink); font-weight: 600; font-size: 1.02rem; }
+.step.now i { width: 2.3rem; height: 2.3rem; margin-top: -0.15rem; border-color: var(--lav); background: var(--lav); color: #fff; box-shadow: 0 0 0 6px rgba(111, 95, 214, 0.16), 0 6px 16px rgba(111, 95, 214, 0.35); }
+.step:hover { color: var(--lav); }
+
+/* scene */
+.scene-wrap { position: relative; margin: 0 var(--gutter); }
+.scene { position: relative; height: min(64vh, 760px); min-height: 26rem; border-radius: 24px; overflow: hidden;
+    background: radial-gradient(ellipse at 45% 40%, #2a3358 0%, #161c35 65%, #0d1124 100%); box-shadow: 0 18px 40px rgba(31, 35, 90, 0.18); }
+.scene > canvas { display: block; width: 100%; height: 100%; touch-action: none; }
+.leader { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.pill { position: absolute; top: 1.1rem; display: inline-flex; align-items: center; gap: 0.55rem; padding: 0.55rem 1.05rem; border-radius: 999px; background: rgba(255, 255, 255, 0.96); color: var(--ink); font-size: 0.95rem; box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18); }
+.pill .muted { color: var(--muted); }
+.pill .dot { width: 0.5rem; height: 0.5rem; border-radius: 50%; background: var(--ink); }
+.pill .sw { width: 1.4rem; height: 0.95rem; border-radius: 0.25rem; background: #141a3a; }
+.pill.tl { inset-inline-start: 1.1rem; }
+.pill.tr { inset-inline-end: 1.1rem; }
+.sensor-card { position: absolute; top: 24%; inset-inline-end: 3.5%; width: min(22.5rem, 34%); padding: 1rem 1.1rem 0.9rem; border-radius: 18px; background: rgba(255, 255, 255, 0.97); box-shadow: 0 16px 40px rgba(10, 14, 40, 0.3); }
+.sc-head { display: flex; align-items: center; gap: 0.5rem; }
+.sc-head i { width: 0.55rem; height: 0.55rem; border-radius: 50%; flex: none; }
+.sc-head h2 { font-size: 1.12rem; font-weight: 500; color: var(--ink); }
+.sc-head .tag { padding: 0.12rem 0.5rem; border-radius: 0.4rem; background: var(--lav-soft); color: var(--lav); font-size: 0.72rem; font-weight: 500; }
+.sc-head button { margin-inline-start: auto; display: grid; place-items: center; width: 1.8rem; height: 1.8rem; border: 0; border-radius: 50%; background: none; color: var(--ink); }
+.sc-head button:hover { background: #f1f1f8; }
+.sc-lines { display: grid; gap: 0.35rem; margin-top: 0.65rem; font-size: 0.86rem; line-height: 1.45; color: var(--muted); }
+.sc-wave { display: block; width: 100%; height: 3.6rem; margin-top: 0.7rem; border-radius: 0.6rem; background: #faf9fe; }
+.sc-pick { display: flex; gap: 0.4rem; margin-top: 0.7rem; }
+.sc-pick button { width: 1.1rem; height: 1.1rem; padding: 0; border: 2px solid #fff; border-radius: 50%; box-shadow: 0 0 0 1px #d9dbe8; }
+.sc-pick button[aria-pressed="true"] { box-shadow: 0 0 0 2px var(--ink); }
+.caption { position: absolute; left: 50%; bottom: 6.4rem; transform: translateX(-50%); width: min(30rem, 60%); padding: 0.85rem 1.4rem; border: 1px solid rgba(255, 255, 255, 0.6); border-radius: 18px;
+    background: rgba(240, 240, 250, 0.82); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2); }
+.caption strong { display: block; font-size: 1.08rem; font-weight: 500; color: var(--ink); }
+.caption span { display: block; margin-top: 0.2rem; font-size: 0.92rem; line-height: 1.45; color: var(--muted); }
+.veil { position: absolute; inset: 0; display: grid; place-items: center; background: rgba(10, 14, 27, 0.28); }
+.veil button { display: inline-flex; align-items: center; gap: 0.6rem; padding: 0.95rem 1.8rem; border: 0; border-radius: 999px; background: var(--lav); color: #fff; font-size: 1.05rem; font-weight: 600; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35); }
+.indicators { position: absolute; left: 50%; bottom: -2.4rem; transform: translateX(-50%); display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.75rem; width: min(52rem, 70%); padding: 0.6rem; border-radius: 22px; background: rgba(255, 255, 255, 0.9); box-shadow: 0 14px 34px rgba(31, 35, 90, 0.16); }
+.ind { display: flex; align-items: center; justify-content: space-between; gap: 0.6rem; min-height: 5.2rem; padding: 0.8rem 1rem; border-radius: 16px; background: #fff; border: 1px solid #f0f0f7; }
+.ind > span { align-self: flex-start; font-size: 0.98rem; color: var(--ink); }
+.ind .badge { display: grid; place-items: center; min-width: 3.4rem; height: 3.4rem; padding: 0 0.4rem; border-radius: 50%; background: var(--ink); color: #fff; font-size: 1.15rem; font-weight: 600; }
+.ind.waves { flex-direction: column; align-items: stretch; justify-content: flex-start; gap: 0.2rem; }
+.ind.waves canvas { width: 100%; height: 2.6rem; }
+.ind.light { flex-direction: column; align-items: flex-start; }
+.light-v { display: flex; align-items: center; gap: 0.7rem; font-size: 1.15rem; color: var(--ink); }
+.light-v i { width: 3.2rem; height: 1.8rem; border-radius: 0.45rem; background: #141a3a; border: 1px solid rgba(0, 0, 0, 0.08); }
+
+/* control bar */
+.ctrl { display: flex; align-items: center; gap: 1.3rem; width: min(64rem, calc(100% - 2 * var(--gutter))); margin: 4.2rem auto 2rem; padding: 0.75rem 1.4rem 0.75rem 0.75rem; border-radius: 999px; background: #fff; box-shadow: 0 14px 34px rgba(31, 35, 90, 0.12); }
+[dir="rtl"] .ctrl { padding: 0.75rem 0.75rem 0.75rem 1.4rem; }
+.play { display: grid; place-items: center; width: 4rem; height: 4rem; border: 0; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #9a8cf2, var(--lav) 70%); color: #fff; box-shadow: 0 0 0 6px rgba(111, 95, 214, 0.15), 0 10px 22px rgba(111, 95, 214, 0.4); flex: none; }
+.play svg { width: 1.5rem; height: 1.5rem; }
+.clock { font-size: clamp(1.8rem, 3vw, 2.6rem); font-weight: 500; color: var(--ink); font-variant-numeric: tabular-nums; direction: ltr; min-width: 5.5ch; }
+.sep { width: 1px; align-self: stretch; margin: 0.5rem 0; background: #e8e8f2; }
+.speed { display: grid; gap: 0.4rem; flex: 1; min-width: 9rem; font-size: 0.92rem; color: var(--ink); }
+.speed input { width: 100%; accent-color: var(--lav); direction: ltr; }
+.txt { display: inline-flex; align-items: center; gap: 0.55rem; padding: 0.5rem 0.4rem; border: 0; background: none; color: var(--ink); font-size: 1.08rem; white-space: nowrap; }
+.txt svg { width: 1.3rem; height: 1.3rem; }
+.txt:hover { color: var(--lav); }
+[dir="rtl"] .flip { transform: scaleX(-1); }
+
+/* science details view */
+.details { padding: 1.2rem var(--gutter) 2.5rem; }
+.details-top { display: flex; flex-wrap: wrap; align-items: center; gap: 0.8rem 1.2rem; margin-bottom: 1.2rem; }
+.details-top h2 { flex: 1; font-size: 1.35rem; font-weight: 600; color: var(--ink); }
+.tool { min-height: 2.4rem; padding: 0 0.95rem; border: 1px solid #d3d9eb; border-radius: 999px; background: #fff; color: var(--ink); font-size: 0.86rem; white-space: nowrap; }
+.tool:hover { border-color: var(--lav); color: var(--lav); }
+.tool[aria-pressed="true"] { background: var(--navy); border-color: var(--navy); color: #fff; }
+.dgrid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr); gap: 1rem; }
+.span2 { grid-column: span 2; }
+.span3 { grid-column: 1 / -1; }
+.card { padding: 1.1rem; border: 1px solid var(--line); border-radius: 1.1rem; background: var(--card); box-shadow: 0 10px 30px rgba(31, 45, 110, 0.05); }
+.card-head { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; margin-bottom: 0.7rem; }
+.card h3 { font-size: 0.95rem; font-weight: 600; color: var(--ink); }
+.card h4 { margin-top: 0.9rem; font-size: 0.82rem; font-weight: 600; color: var(--ink); }
+.tag-sim { padding: 0.12rem 0.5rem; border-radius: 0.4rem; background: #fff4dd; color: #a86c06; font-size: 0.66rem; font-weight: 700; letter-spacing: 0.03em; white-space: nowrap; }
+.small { font-size: 0.78rem; line-height: 1.5; color: var(--muted); }
+.kv { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.5rem; margin-top: 0.7rem; }
+.kv div { padding: 0.5rem; border-radius: 0.7rem; background: #f6f7fb; }
+.kv dt { font-size: 0.68rem; color: var(--muted); }
+.kv dd { margin: 0.1rem 0 0; font-size: 0.92rem; font-weight: 600; color: var(--ink); font-variant-numeric: tabular-nums; }
+.detects { margin-top: 0.7rem; padding: 0.65rem 0.75rem; border-radius: 0.8rem; background: var(--lav-soft); font-size: 0.82rem; line-height: 1.55; }
+.status { display: flex; align-items: center; gap: 0.5rem; padding: 0.55rem 0.7rem; border-radius: 0.8rem; background: #f6f7fb; font-size: 0.85rem; font-weight: 500; color: var(--ink); }
+.status i { width: 0.6rem; height: 0.6rem; border-radius: 50%; background: #aab1c8; flex: none; }
+.status[data-s="active"] { background: var(--pink-soft); color: #b22a50; } .status[data-s="active"] i { background: var(--pink); }
+.status[data-s="guide"] { background: var(--lav-soft); color: #4e3fb8; } .status[data-s="guide"] i { background: var(--lav); }
+.status[data-s="stopped"] { background: #fff4dd; color: #8a5a05; } .status[data-s="stopped"] i { background: var(--amber); }
+.rules { display: grid; gap: 0.25rem; margin: 0.7rem 0 0; padding: 0; list-style: none; }
+.rules li { display: grid; grid-template-columns: 5.4rem minmax(0, 1fr); gap: 0.5rem; padding: 0.4rem 0.55rem; border-radius: 0.6rem; font-size: 0.78rem; line-height: 1.4; color: var(--muted); }
+.rules li b { font-weight: 600; color: var(--ink); }
+.rules li.on { background: var(--lav-soft); color: #3f3299; }
+.vol { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 0.6rem; margin-top: 0.8rem; font-size: 0.8rem; color: var(--ink); }
+.bar { height: 0.5rem; border-radius: 999px; background: #eef0f7; overflow: hidden; }
+.bar i { display: block; height: 100%; border-radius: inherit; background: var(--lav); transition: width 0.3s ease; }
+.steps { display: grid; gap: 0.25rem; margin: 0.5rem 0 0; padding: 0; list-style: none; counter-reset: s; }
+.steps li { display: flex; align-items: center; gap: 0.5rem; padding: 0.3rem 0.5rem; border-radius: 0.6rem; font-size: 0.78rem; color: var(--muted); }
+.steps li::before { counter-increment: s; content: counter(s); display: grid; place-items: center; width: 1.2rem; height: 1.2rem; border-radius: 50%; background: #eef0f7; font-size: 0.66rem; font-weight: 700; flex: none; }
+.steps li.on { background: var(--pink-soft); color: #b22a50; font-weight: 600; }
+.steps li.on::before { background: var(--pink); color: #fff; }
+.caveat { margin-top: 0.7rem; padding: 0.6rem 0.7rem; border-inline-start: 3px solid var(--amber); border-radius: 0.4rem; background: #fffaf0; font-size: 0.76rem; line-height: 1.55; color: #6b5323; }
+.trace { display: block; width: 100%; height: 11rem; border-radius: 0.7rem; background: #fbfbfe; }
+.trace.short { height: 7rem; }
+.legend { display: flex; flex-wrap: wrap; gap: 0.4rem 1rem; margin-top: 0.5rem; font-size: 0.74rem; color: var(--muted); }
+.legend span { display: inline-flex; align-items: center; gap: 0.35rem; }
+.legend i { display: inline-block; width: 0.9rem; height: 0.18rem; }
+.bands { display: grid; gap: 0.55rem; }
+.band { display: grid; grid-template-columns: 4.6rem minmax(0, 1fr) 2.6rem; align-items: center; gap: 0.5rem; font-size: 0.78rem; }
+.band b { font-weight: 600; color: var(--ink); } .band small { display: block; font-size: 0.66rem; color: var(--muted); }
+.band output { text-align: end; font-variant-numeric: tabular-nums; font-weight: 600; color: var(--ink); }
+.tiles { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 0.75rem; }
+.tile { padding: 0.8rem; border: 1px solid var(--line); border-radius: 1rem; background: #fff; }
+.tile h4 { margin: 0; font-size: 0.74rem; color: var(--muted); }
+.tile .val { margin-top: 0.25rem; font-size: 1.25rem; font-weight: 600; color: var(--ink); font-variant-numeric: tabular-nums; }
+.tile .val small { font-size: 0.72rem; font-weight: 500; color: var(--muted); }
+.tile .sub { min-height: 1.1rem; font-size: 0.72rem; color: var(--muted); }
+.tile canvas { display: block; width: 100%; height: 2.6rem; margin-top: 0.35rem; }
+.hypno { display: block; width: 100%; height: 12.5rem; }
+.sensors { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.75rem; }
+.sensor { padding: 0.85rem; border-radius: 0.9rem; background: #f6f7fb; }
+.sensor h4 { display: flex; align-items: center; gap: 0.45rem; margin: 0 0 0.45rem; font-size: 0.88rem; }
+.sensor h4 i { width: 0.6rem; height: 0.6rem; border-radius: 50%; }
+.sensor dl { display: grid; gap: 0.4rem; } .sensor dt { font-size: 0.68rem; font-weight: 600; color: var(--muted); } .sensor dd { margin: 0; font-size: 0.8rem; line-height: 1.5; }
+.science { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.6rem 1.5rem; padding: 0; list-style: none; }
+.science li { position: relative; padding-inline-start: 1rem; font-size: 0.84rem; line-height: 1.6; }
+.science li::before { content: ""; position: absolute; inset-inline-start: 0; top: 0.55rem; width: 0.4rem; height: 0.4rem; border-radius: 50%; background: var(--lav); }
+.science strong { color: var(--ink); font-weight: 600; }
+.sources { margin-top: 0.9rem; font-size: 0.75rem; line-height: 1.7; color: var(--muted); }
+.sources a { color: var(--accent); }
+
+@media (max-width: 1100px) {
+    .dgrid { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+    .tiles { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .sensors { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .indicators { width: 86%; }
+}
+@media (max-width: 760px) {
+    .hdr { grid-template-columns: 1fr auto; }
+    .hdr h1 { grid-column: 1 / -1; grid-row: 2; }
+    .stepper { margin-inline: var(--gutter); }
+    .step span { font-size: 0.72rem; }
+    .scene { height: 60vh; }
+    .sensor-card { top: auto; bottom: 1rem; inset-inline: 1rem; width: auto; }
+    .caption { bottom: auto; top: 4rem; width: calc(100% - 2rem); }
+    .indicators { position: static; transform: none; width: 100%; margin-top: 0.8rem; grid-template-columns: 1fr; }
+    .ctrl { flex-wrap: wrap; border-radius: 1.4rem; margin-top: 1rem; }
+    .ctrl .sep { display: none; }
+    .speed { order: 5; flex-basis: 100%; }
+    .dgrid, .sensors, .science { grid-template-columns: minmax(0, 1fr); }
+    .span2 { grid-column: auto; }
+    .tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+</style>
+<script type="importmap">
+{ "imports": {
+    "three": "../../assets/vendor/three/three.module.min.js",
+    "three/addons/controls/OrbitControls.js": "../../assets/vendor/three/OrbitControls.js"
+} }
+</script>
+</head>
+<body>
+<header class="hdr">
+    <div class="logo"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 0C12.7 7.6 16.4 11.3 24 12C16.4 12.7 12.7 16.4 12 24C11.3 16.4 7.6 12.7 0 12C7.6 11.3 11.3 7.6 12 0Z" fill="currentColor"/></svg>OrbitCare</div>
+    <h1 data-i18n="title"></h1>
+    <div class="hdr-end">
+        <span class="chip-sim" data-i18n="simulated"></span>
+        <button class="lang" type="button" data-lang><span></span><svg viewBox="0 0 12 12" aria-hidden="true"><path d="M2 4l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button>
+    </div>
+</header>
+
+<main data-view-main>
+    <ol class="stepper" data-stepper><span class="fill" data-step-fill></span></ol>
+
+    <div class="scene-wrap">
+        <section class="scene" data-stage>
+            <canvas data-canvas></canvas>
+            <svg class="leader" data-leader aria-hidden="true"><line stroke="rgba(255,255,255,0.85)" stroke-width="1.4"/><circle r="3.5" fill="#fff"/></svg>
+            <span class="pill tl" data-ov-stage></span>
+            <span class="pill tr" data-ov-light></span>
+            <aside class="sensor-card" data-card aria-live="polite">
+                <div class="sc-head"><i data-card-dot></i><h2 data-card-title></h2><span class="tag" data-card-role></span>
+                    <button type="button" data-card-close aria-label="close"><svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M3 3l10 10M13 3L3 13" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button></div>
+                <div class="sc-lines" data-card-lines></div>
+                <canvas class="sc-wave" data-card-wave></canvas>
+                <div class="sc-pick" data-card-pick></div>
+            </aside>
+            <div class="caption" data-caption><strong></strong><span></span></div>
+            <div class="veil" data-veil><button type="button" data-veil-start><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M7 4l13 8-13 8z" fill="currentColor"/></svg><span></span></button></div>
+        </section>
+        <div class="indicators">
+            <div class="ind"><span data-i18n="ind_stage"></span><b class="badge" data-ind-stage>W</b></div>
+            <div class="ind waves"><span data-i18n="ind_waves"></span><canvas data-ind-waves></canvas></div>
+            <div class="ind light"><span data-i18n="ind_light"></span><div class="light-v"><i data-ind-sw></i><b data-ind-light></b></div></div>
+        </div>
+    </div>
+
+    <div class="ctrl">
+        <button class="play" type="button" data-play></button>
+        <strong class="clock" data-clock>19:30</strong>
+        <span class="sep"></span>
+        <label class="speed"><span data-speed-label></span><input type="range" min="0" max="100" step="1" data-speed-range></label>
+        <button class="txt" type="button" data-reset><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12a8 8 0 1 0 2.4-5.7M4 4v4h4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><span data-i18n="restart"></span></button>
+        <span class="sep"></span>
+        <button class="txt" type="button" data-details-open><svg class="flip" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15M13 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><span data-i18n="details"></span></button>
+    </div>
+</main>
+
+<section class="details" data-view-details hidden>
+    <div class="details-top">
+        <button class="txt" type="button" data-details-close><svg class="flip" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12H5M11 6l-6 6 6 6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><span data-i18n="back"></span></button>
+        <h2 data-i18n="details"></h2>
+        <button class="tool" type="button" data-stim-toggle></button>
+        <button class="tool" type="button" data-light-toggle></button>
+        <button class="tool" type="button" data-hear></button>
+        <span class="chip-sim" data-i18n="simulated"></span>
+    </div>
+    <div class="dgrid">
+        <section class="card">
+            <div class="card-head"><h3 data-i18n="stage_now"></h3><span class="tag-sim" data-i18n="simulated"></span></div>
+            <p class="detects" data-st-detects></p>
+            <dl class="kv"><div><dt data-i18n="asleep"></dt><dd data-st-asleep>—</dd></div><div><dt data-i18n="n3_total"></dt><dd data-st-n3>—</dd></div><div><dt data-i18n="rem_total"></dt><dd data-st-rem>—</dd></div></dl>
+            <div data-report hidden><h4 data-i18n="report_title"></h4><dl class="kv" data-report-kv></dl><p class="small" style="margin-top:0.6rem" data-report-learned></p></div>
+        </section>
+        <section class="card">
+            <div class="card-head"><h3 data-i18n="assist_title"></h3><span class="tag-sim" data-i18n="simulated"></span></div>
+            <p class="status" data-status><i></i><span></span></p>
+            <ol class="rules" data-rules></ol>
+            <div class="vol"><span data-vol-label></span><div class="bar"><i data-vol-bar></i></div></div>
+        </section>
+        <section class="card">
+            <div class="card-head"><h3 data-i18n="clas_title"></h3><span class="tag-sim" data-i18n="simulated"></span></div>
+            <ol class="steps" data-steps></ol>
+            <p class="small" style="margin-top:0.6rem" data-stim-count></p>
+            <p class="caveat" data-i18n="stim_caveat"></p>
+        </section>
+        <section class="card span2">
+            <div class="card-head"><h3 data-i18n="eeg_title"></h3><span class="tag-sim" data-i18n="simulated"></span></div>
+            <canvas class="trace" data-eeg></canvas>
+            <div class="legend" data-eeg-legend></div>
+        </section>
+        <section class="card">
+            <div class="card-head"><h3 data-i18n="bands_title"></h3><span class="tag-sim" data-i18n="simulated"></span></div>
+            <div class="bands" data-bands></div>
+            <p class="small" style="margin-top:0.7rem" data-i18n="bands_note"></p>
+        </section>
+        <section class="card span2">
+            <div class="card-head"><h3 data-i18n="eog_title"></h3><span class="tag-sim" data-i18n="simulated"></span></div>
+            <canvas class="trace short" data-eog></canvas>
+        </section>
+        <section class="card">
+            <div class="card-head"><h3 data-i18n="light_title"></h3><span class="tag-sim" data-i18n="simulated"></span></div>
+            <dl class="kv"><div><dt data-i18n="cct"></dt><dd data-l-cct>—</dd></div><div><dt data-i18n="brightness"></dt><dd data-l-bright>—</dd></div><div><dt data-i18n="next_change"></dt><dd data-l-next>—</dd></div></dl>
+            <p class="small" style="margin-top:0.6rem" data-l-note></p>
+        </section>
+        <div class="tiles span3" data-tiles></div>
+        <section class="card span3">
+            <div class="card-head"><h3 data-i18n="hypno_title"></h3><span class="tag-sim" data-i18n="simulated"></span></div>
+            <canvas class="hypno" data-hypno></canvas>
+        </section>
+        <section class="card span3">
+            <div class="card-head"><h3 data-i18n="sensors_title"></h3></div>
+            <div class="sensors" data-sensors></div>
+            <p class="small" style="margin-top:0.6rem" data-i18n="glow_note"></p>
+        </section>
+        <section class="card span3">
+            <div class="card-head"><h3 data-i18n="science_title"></h3></div>
+            <ul class="science" data-science></ul>
+            <p class="sources" data-sources></p>
+        </section>
+    </div>
+</section>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+// ================================================================ texts
+const UI = {
+    ar: {
+        title: 'محاكاة نوم رائد الفضاء', simulated: 'بيانات محاكاة', lang: 'English',
+        chapters: ['قبل النوم', 'بداية النوم', 'نوم عميق', 'علامات استيقاظ', 'الصباح'],
+        start: 'ابدأ المحاكاة', restart: 'إعادة', details: 'التفاصيل العلمية', back: 'العودة للمحاكاة', speed: 'السرعة ×{n}',
+        ind_stage: 'مرحلة النوم', ind_waves: 'موجات الدماغ', ind_light: 'إضاءة المقصورة',
+        light_short: { day: 'نهار', pre1: 'قبل النوم', pre2: 'قبل النوم', sleep: 'مظلمة', wake: 'فجر', static_on: 'ثابتة', static_off: 'مطفأة' },
+        night_off: 'ليل · الأضواء مطفأة',
+        measures: 'يقيس', where: 'المكان', why: 'لماذا',
+        role_primary: 'أساسي', role_aux: 'مساعد', role_context: 'سياق', role_actuator: 'مُخرج صوت',
+        cap: {
+            day: ['استعداد للنوم', 'ضوء المقصورة ساطع وغني بالأزرق، كما في النهار.'],
+            pre: ['ضوء ما قبل النوم', 'قبل النوم بـ 3 ساعات ينخفض الضوء 96% ويصير دافئًا.'],
+            guide: ['تهدئة', 'موجات بيتا ما زالت عالية — إرشاد تنفس بطيء: 6 أنفاس في الدقيقة.'],
+            relaxed: ['أغمض عينيه', 'ظهرت موجات ألفا — توقف الإرشاد وحده، وأُطفئت الأضواء.'],
+            N1: ['بداية النوم', 'موجات ثيتا تحل محل ألفا — سكوت تام، لا صوت.'],
+            N2: ['نوم مستقر', 'مغازل النوم ومركّبات K — النظام يراقب فقط.'],
+            N3: ['وصل للنوم العميق', 'صوت خفيف عند قمة كل موجة بطيئة — العلو {v}/10'],
+            N3wait: ['وصل للنوم العميق', 'موجات بطيئة كبيرة — النظام يجهّز التوقيت.'],
+            arousal: ['علامات استيقاظ', 'حركة وموجات ألفا — توقف الصوت فورًا، وانخفض العلو إلى {v}/10.'],
+            learned: ['تعلّم النظام', 'علو {b}/10 أيقظه — لن يتجاوز {c}/10 بعد الآن.'],
+            REM: ['نوم الأحلام (REM)', 'حركات عين سريعة — لا صوت في REM.'],
+            W: ['استيقاظ قصير', 'استيقظ لحظات — لا صوت، والمقصورة مظلمة.'],
+            morning: ['الصباح', 'فجر تدريجي، والصحيان في نوم خفيف.'],
+            done: ['تقرير الليلة', 'نوم عميق {n3} · أول نوم عميق بعد {lat} · العلو المناسب {v}/10'],
+        },
+        stage_now: 'مرحلة النوم الآن', asleep: 'نوم حتى الآن', n3_total: 'مجموع N3', rem_total: 'مجموع REM',
+        report_title: 'تقرير الصباح', r_onset: 'حتى غفا', r_n3lat: 'حتى أول N3', r_n3: 'نوم عميق', r_total: 'مجموع النوم', r_wakes: 'استيقاظات', r_pulses: 'نبضات (العرض)',
+        r_learned: 'تعلّم النظام أن علو {v}/10 مناسب لهذا الرائد{bad}، وسيبدأ منه الليلة القادمة.', r_bad: ' (علو {b} أيقظه)',
+        assist_title: 'مساعد النوم العميق',
+        rules: [['pre', 'قبل النوم', 'إضاءة HERA: خفض السطوع 96% وأقل أزرق'], ['guide', 'بيتا عالية', 'إرشاد تنفس بطيء (6/د) يتوقف وحده عندما تهدأ بيتا'], ['onset', 'ألفا ← ثيتا', 'يغفو: سكوت تام وظلام'], ['n2', 'N2', 'مراقبة فقط'], ['n3', 'N3', 'صوت عند قمة كل موجة بطيئة، والعلو يتكيّف'], ['arousal', 'علامة استيقاظ', 'توقف فوري وخفض الصوت درجتين'], ['rem', 'REM', 'لا شيء'], ['morning', 'الصباح', 'فجر تدريجي وصحيان في نوم خفيف']],
+        vol: 'علو الصوت {v}/10',
+        st_off: 'الدعم الصوتي متوقف', st_wait: 'بانتظار نوم NREM مستقر', st_active: 'التحفيز التكيفي يعمل', st_arousal: 'توقف: علامات استيقاظ — خُفض الصوت', st_stage: 'لا صوت في هذه المرحلة', st_lowdelta: 'يراقب: الموجات البطيئة غير كافية بعد', st_guide: 'إرشاد التنفس يعمل', st_quiet: 'سكوت تام — يغفو',
+        clas_title: 'توقيت الصوت (حلقة مغلقة)', stim_steps: ['مراقبة EEG', 'رُصدت موجة بطيئة', 'تحديد الطور: القمة القادمة', 'نبضة ضوضاء وردية 50 ms', 'متابعة الاستجابة'],
+        pulses: 'نبضات في هذا العرض: {n}', response: 'استجابة الموجة التالية: {p} (محاكاة)',
+        stim_caveat: 'محاكاة توضيحية، والنظام غير معتمد سريريًا ولم يُجرَّب في الفضاء. يقوّي النوم العميق عندما يحدث ولا يضمنه. لا يُشغَّل الصوت أبدًا بدون قياس الدماغ: في دراسة قلّلت أصوات أثناء النوم النوم العميق 30%.',
+        stim_on: 'الدعم الصوتي: يعمل', stim_off: 'الدعم الصوتي: متوقف', light_on: 'الإضاءة الديناميكية: تعمل', light_off: 'الإضاءة الديناميكية: متوقفة', hear: 'سماع النبضات',
+        light_title: 'إضاءة المقصورة', cct: 'حرارة اللون', brightness: 'السطوع', next_change: 'التغيير القادم',
+        note_dyn: 'الجدول من دراسة NASA HERA (45 يومًا، 16 مشاركًا): نهار أسطع بنحو 3 أضعاف وأغنى بالأزرق، ثم قبل النوم بـ 3 ساعات يُخفَض السطوع 96% (≈4000K ساعتين ثم ≈3000K ساعة). الإضاءة لا تتغير مع مراحل النوم. الفجر التدريجي اختيار تصميم في OrbitCare.',
+        note_static: 'وضع المقارنة في الدراسة: ≈4000K ثابت طوال اليقظة (ثلث سطوع نهار الجدول الديناميكي).',
+        eeg_title: 'EEG — أقطاب الجبهة (عرض حي بالسرعة الحقيقية)', eeg_leg_thr: 'حد رصد الموجة البطيئة', eeg_leg_trough: 'قاع موجة مرصود', eeg_leg_pulse: 'نبضة صوت عند القمة',
+        bands_title: 'نطاقات التردد', bands_note: 'محسوبة من آخر 4 ثوانٍ من الإشارة المحاكاة (تحويل فورييه).', b_delta: 'دلتا', b_theta: 'ثيتا', b_alpha: 'ألفا', b_beta: 'بيتا',
+        eog_title: 'EOG — حركة العينين',
+        t_hr: 'نبض القلب', t_hrv: 'تقلّب النبض (RMSSD)', t_temp: 'حرارة الجلد', t_move: 'حركة الرأس', t_orient: 'دوران الرأس', t_eog: 'نشاط العينين',
+        bpm: 'نبضة/د', ms: 'ms', degs: '°/ث', hr_sub: 'من PPG — إشارة مساعدة', hrv_sub: 'من فترات النبض', temp_sub: 'سياق فقط', move_sub: 'من IMU', orient_sub: 'نسبةً إلى كيس النوم',
+        eog_blink: 'رمش وحركات سريعة', eog_quiet: 'هادئ', eog_slow: 'حركات بطيئة متدحرجة', eog_rem: 'حركات عين سريعة',
+        hypno_title: 'مخطط النوم والإضاءة عبر الليل', light_row: 'الضوء', stim_row: 'تحفيز',
+        sensors_title: 'حساسات عصابة النوم — الشرح الكامل', what: 'ماذا يقيس / يفعل', where_l: 'المكان', why_l: 'لماذا هنا وحدوده',
+        glow_note: 'ألوان الحساسات ووميضها على الشاشة للتوضيح فقط وتتبع الإشارة الحية؛ العصابة الحقيقية لا تُصدر أي ضوء.',
+        science_title: 'العلم وحدوده', sources: 'المراجع:',
+    },
+    en: {
+        title: 'Astronaut Sleep Simulation', simulated: 'SIMULATED DATA', lang: 'العربية',
+        chapters: ['Before bed', 'Falling asleep', 'Deep sleep', 'Waking signs', 'Morning'],
+        start: 'Start sleep simulation', restart: 'Restart', details: 'Science details', back: 'Back to the simulation', speed: 'Speed ×{n}',
+        ind_stage: 'Sleep stage', ind_waves: 'Brain waves', ind_light: 'Cabin light',
+        light_short: { day: 'Day', pre1: 'Pre-sleep', pre2: 'Pre-sleep', sleep: 'Dark', wake: 'Dawn', static_on: 'Static', static_off: 'Off' },
+        night_off: 'Night · lights off',
+        measures: 'Measures', where: 'Where', why: 'Why',
+        role_primary: 'Primary', role_aux: 'Auxiliary', role_context: 'Context', role_actuator: 'Sound output',
+        cap: {
+            day: ['Getting ready for bed', 'Cabin light is bright and blue-enriched, as in the daytime.'],
+            pre: ['Pre-sleep light', 'From 3 hours before bed the light drops 96 % and turns warm.'],
+            guide: ['Calming down', 'Beta waves are still high — a slow-breathing guide plays: 6 breaths a minute.'],
+            relaxed: ['Eyes closed', 'Alpha waves appear — the guide stops by itself and the lights go out.'],
+            N1: ['Falling asleep', 'Theta waves replace alpha — total silence, nothing plays.'],
+            N2: ['Stable sleep', 'Spindles and K-complexes — the system only watches.'],
+            N3: ['Deep sleep reached', 'A soft sound plays at the peak of each slow wave — volume {v}/10'],
+            N3wait: ['Deep sleep reached', 'Large slow waves — the system is lining up the timing.'],
+            arousal: ['Waking signs', 'Movement and alpha waves — the sound stops at once, volume down to {v}/10.'],
+            learned: ['The system learned', 'Volume {b}/10 woke him — it will stay at or below {c}/10 from now on.'],
+            REM: ['Dream sleep (REM)', 'Rapid eye movements — no sound in REM.'],
+            W: ['Brief awakening', 'Awake for a moment — no sound, the cabin stays dark.'],
+            morning: ['Morning', 'Gradual dawn, woken during light sleep.'],
+            done: ['Night report', 'Deep sleep {n3} · first deep sleep after {lat} · suitable volume {v}/10'],
+        },
+        stage_now: 'Sleep stage now', asleep: 'Asleep so far', n3_total: 'N3 total', rem_total: 'REM total',
+        report_title: 'Morning report', r_onset: 'To fall asleep', r_n3lat: 'To first N3', r_n3: 'Deep sleep', r_total: 'Total sleep', r_wakes: 'Awakenings', r_pulses: 'Pulses (view)',
+        r_learned: 'The system learned that volume {v}/10 suits this astronaut{bad}; it will start there tomorrow night.', r_bad: ' (volume {b} woke him)',
+        assist_title: 'Deep-sleep assistant',
+        rules: [['pre', 'Before bed', 'HERA lighting: 96 % dimmer, less blue'], ['guide', 'High beta', 'Slow-breathing guide (6/min), stops by itself when beta settles'], ['onset', 'Alpha → theta', 'Falling asleep: total quiet and dark'], ['n2', 'N2', 'Monitoring only'], ['n3', 'N3', 'Sound at the peak of each slow wave, volume adapts'], ['arousal', 'Arousal', 'Stop at once, volume down two steps'], ['rem', 'REM', 'Nothing'], ['morning', 'Morning', 'Gradual dawn, wake-up in light sleep']],
+        vol: 'Volume {v}/10',
+        st_off: 'Audio support off', st_wait: 'Waiting for stable NREM sleep', st_active: 'Adaptive stimulation active', st_arousal: 'Stopped: signs of awakening — volume lowered', st_stage: 'No sound in this stage', st_lowdelta: 'Monitoring: not enough slow-wave activity yet', st_guide: 'Breathing guide on', st_quiet: 'Total quiet — falling asleep',
+        clas_title: 'Sound timing (closed loop)', stim_steps: ['Monitoring EEG', 'Slow oscillation detected', 'Phase: next up-state', '50 ms pink-noise pulse', 'Checking the response'],
+        pulses: 'Pulses in this view: {n}', response: 'Next slow wave: {p} (simulated)',
+        stim_caveat: 'An illustrative simulation — not clinically validated and not tested in space. It strengthens deep sleep when it happens; it does not guarantee it. Sound is never played without measuring the brain: in one study, sounds during sleep cut deep sleep by 30 %.',
+        stim_on: 'Audio support: on', stim_off: 'Audio support: off', light_on: 'Dynamic lighting: on', light_off: 'Dynamic lighting: off', hear: 'Hear pulses',
+        light_title: 'Cabin lighting', cct: 'Colour temperature', brightness: 'Brightness', next_change: 'Next change',
+        note_dyn: 'Schedule from the NASA HERA study (45 days, 16 participants): daytime about 3× brighter and bluer, then from 3 h before bedtime illuminance cut by 96 % (≈4000 K for 2 h, then ≈3000 K for 1 h). Lighting does not change with sleep stages. The gradual dawn is an OrbitCare design choice.',
+        note_static: 'The study’s comparison condition: a constant ≈4000 K during wake (one third of the dynamic daytime brightness).',
+        eeg_title: 'EEG — frontal electrodes (live view, real speed)', eeg_leg_thr: 'Slow-wave detection threshold', eeg_leg_trough: 'Detected trough', eeg_leg_pulse: 'Sound pulse at the up-state',
+        bands_title: 'Frequency bands', bands_note: 'Computed from the last 4 s of the simulated signal (Fourier transform).', b_delta: 'Delta', b_theta: 'Theta', b_alpha: 'Alpha', b_beta: 'Beta',
+        eog_title: 'EOG — eye movements',
+        t_hr: 'Heart rate', t_hrv: 'HRV (RMSSD)', t_temp: 'Skin temperature', t_move: 'Head movement', t_orient: 'Head orientation', t_eog: 'Eye activity',
+        bpm: 'bpm', ms: 'ms', degs: '°/s', hr_sub: 'From PPG — auxiliary', hrv_sub: 'From beat intervals', temp_sub: 'Context only', move_sub: 'From the IMU', orient_sub: 'Relative to the sleeping bag',
+        eog_blink: 'Blinks and saccades', eog_quiet: 'Quiet', eog_slow: 'Slow rolling movements', eog_rem: 'Rapid eye movements',
+        hypno_title: 'Hypnogram and lighting across the night', light_row: 'Light', stim_row: 'Stim',
+        sensors_title: 'Sleep headband sensors — full explanation', what: 'What it measures / does', where_l: 'Placement', why_l: 'Why here, and limits',
+        glow_note: 'Sensor colours and their glow are on-screen illustrations that follow each live signal; the real headband gives off no light.',
+        science_title: 'The science, and its limits', sources: 'References:',
+    },
+};
+
+const STAGE_INFO = {
+    W: { color: '#8a93b2', name: { ar: 'يقظة', en: 'Awake' } },
+    N1: { color: '#7fb3e8', name: { ar: 'N1 نوم خفيف', en: 'N1 Light sleep' } },
+    N2: { color: '#4f7fd6', name: { ar: 'N2 نوم مستقر', en: 'N2 Stable sleep' } },
+    N3: { color: '#1b2350', name: { ar: 'N3 نوم عميق', en: 'N3 Deep sleep' } },
+    REM: { color: '#8b6fe0', name: { ar: 'REM حركة العين السريعة', en: 'REM Rapid eye movement' } },
+};
+const DETECTS = {
+    active: { ar: 'العينان مفتوحتان: نشاط بيتا سريع ومنخفض، رمش وحركات عين في EOG، والرأس يتحرك.', en: 'Eyes open: fast, low beta activity; blinks and saccades on the EOG; the head moves.' },
+    winddown: { ar: 'تهدئة قبل النوم: الحركة تقل، وبيتا ما زالت مرتفعة، فيعمل إرشاد التنفس.', en: 'Winding down: less movement, beta still high, so the breathing guide runs.' },
+    relaxed: { ar: 'العينان مغمضتان: موجات ألفا (8–13 Hz) واضحة، أقواها من أقطاب مؤخرة الرأس.', en: 'Eyes closed: clear alpha (8–13 Hz), strongest at the back-of-head electrodes.' },
+    N1: { ar: 'ألفا تختفي وتحل محلها ثيتا (4–8 Hz)، مع حركات عين بطيئة متدحرجة وموجات حادة عابرة.', en: 'Alpha fades and theta (4–8 Hz) takes over, with slow rolling eye movements and brief sharp waves.' },
+    N2: { ar: 'مغازل النوم (رشقات 11–16 Hz) ومركّبات K؛ العينان ساكنتان.', en: 'Sleep spindles (11–16 Hz bursts) and K-complexes; the eyes are still.' },
+    N3: { ar: 'موجات بطيئة 0.5–2 Hz بسعة أكبر من 75 µV في 20% على الأقل من كل 30 ثانية. هنا يعمل التحفيز الصوتي.', en: 'Slow waves of 0.5–2 Hz, over 75 µV peak-to-peak in at least 20 % of each 30-s epoch. This is where stimulation runs.' },
+    REM: { ar: 'نشاط منخفض ومختلط يشبه اليقظة، موجات «سن المنشار»، وحركات عين سريعة؛ الجسم مرتخٍ.', en: 'Low, mixed activity close to wake, “sawtooth” waves, and rapid eye movements; the body is slack.' },
+    morning: { ar: 'استيقاظ: عودة بيتا والرمش وحركة الرأس.', en: 'Awake: beta, blinks and head movement return.' },
+};
+
+// Headband: electrode layout of the Dreem dry-EEG headband (O1, O2, Fpz, F7, F8), compared with polysomnography in Arnal et al. 2020.
+// short: the three lines of the sensor card · full: the "Science details" explanation
+const SENSORS = [
+    { id: 'eeg', color: '#8b6ff0', role: 'primary', title: { ar: 'EEG — موجات الدماغ', en: 'EEG — brain waves' },
+      short: { measures: { ar: 'مراحل النوم والموجات البطيئة', en: 'Sleep stages and slow waves' }, where: { ar: '3 أقطاب جافة على الجبهة + 2 خلف الرأس', en: '3 dry electrodes on the forehead + 2 at the back' }, why: { ar: 'الجبهة تلتقط موجات النوم العميق بأفضل شكل', en: 'The forehead picks up deep-sleep waves best' } },
+      full: { what: { ar: 'الإشارة الأساسية لتحديد مراحل النوم: ألفا، ثيتا، مغازل النوم، مركّبات K والموجات البطيئة. ومنها يقرّر المساعد ماذا يفعل، ويرصد الموجة البطيئة ليوقّت الصوت.', en: 'The main signal for sleep staging: alpha, theta, spindles, K-complexes and slow waves. The assistant decides what to do from it, and finds slow waves in it to time the sound.' },
+          where: { ar: 'خمسة أقطاب جافة (بلا جل): F7 وFpz (مرجع) وF8 على الجبهة، وO1 وO2 على مؤخرة الرأس.', en: 'Five dry electrodes (no gel): F7, Fpz (reference) and F8 on the forehead; O1 and O2 at the back of the head.' },
+          why: { ar: 'الجبهة تلتقط الموجات البطيئة بقوة، ومؤخرة الرأس تلتقط ألفا عند إغماض العينين. عصابة بهذا التوزيع حدّدت المراحل آليًا بدقة 83.5% مقابل 86.4% لخبراء النوم (25 شخصًا، دراسة بتمويل الشركة المصنّعة).', en: 'The forehead picks up slow waves strongly; the back of the head picks up eyes-closed alpha. A headband with this layout staged sleep automatically with 83.5 % accuracy vs 86.4 % for sleep experts (25 people, manufacturer-funded study).' } } },
+    { id: 'eog', color: '#3aa0ff', role: 'primary', title: { ar: 'EOG — حركة العين', en: 'EOG — eye movement' },
+      short: { measures: { ar: 'حركة العين — سريعة في REM', en: 'Eye movements — rapid in REM' }, where: { ar: 'عند الزاوية الخارجية للعينين', en: 'At the outer corners of the eyes' }, why: { ar: 'REM يشبه اليقظة على EEG؛ العينان تفرّقان بينهما', en: 'REM looks like wake on EEG; the eyes tell them apart' } },
+      full: { what: { ar: 'حركات العين: سريعة في REM، بطيئة متدحرجة في N1، والرمش في اليقظة.', en: 'Eye movements: rapid in REM, slow and rolling in N1, blinks while awake.' },
+          where: { ar: 'امتدادان مرنان من العصابة: الأيسر تحت الزاوية الخارجية للعين بقليل والأيمن فوقها، فتظهر الحركة في أي اتجاه.', en: 'Two flexible extensions from the band: the left slightly below the outer eye corner, the right slightly above, so movement shows in any direction.' },
+          why: { ar: 'تمييز REM عن اليقظة صعب من EEG وحده لأن الاثنين نشاطهما منخفض ومختلط؛ حركة العين هي الفرق.', en: 'REM is hard to tell from wake on EEG alone — both are low and mixed; eye movement is the difference.' } } },
+    { id: 'imu', color: '#23c483', role: 'aux', title: { ar: 'IMU — حركة الرأس', en: 'IMU — head motion' },
+      short: { measures: { ar: 'حركة الرأس ودورانه', en: 'Head movement and turning' }, where: { ar: 'في الوحدة الخلفية للعصابة', en: 'In the rear module of the band' }, why: { ar: 'الحركة تعني استيقاظًا — يتوقف الصوت فورًا', en: 'Movement means waking — the sound stops at once' } },
+      full: { what: { ar: 'تسارع ودوران ثلاثي المحاور: يكشف التقلّب والاستيقاظ، ويحذّر عندما تكون إشارة EEG مشوّشة بالحركة.', en: 'Three-axis acceleration and rotation: detects restlessness and awakening, and flags EEG corrupted by movement.' },
+          where: { ar: 'داخل الوحدة الخلفية للعصابة مع البطارية والمعالج.', en: 'Inside the rear module of the band, with the battery and processor.' },
+          why: { ar: 'في انعدام الجاذبية لا معنى لـ«مستلقٍ أو واقف»؛ المهم كمية الحركة ودوران الرأس داخل كيس النوم.', en: 'In microgravity “lying” or “standing” mean nothing; what matters is how much the head moves and turns inside the sleeping bag.' } } },
+    { id: 'ppg', color: '#ff5f8a', role: 'aux', title: { ar: 'PPG — النبض', en: 'PPG — pulse' },
+      short: { measures: { ar: 'النبض وتقلّبه (HRV)', en: 'Pulse and heart-rate variability' }, where: { ar: 'الصدغ الأيمن، ملامس للجلد', en: 'Right temple, against the skin' }, why: { ar: 'إشارة مساعدة فقط — لا تحدد المرحلة وحدها', en: 'Helper signal only — it cannot stage sleep alone' } },
+      full: { what: { ar: 'النبض وتقلّب معدل القلب (HRV) من الضوء المنعكس عن الجلد.', en: 'Pulse and heart-rate variability (HRV) from light reflected by the skin.' },
+          where: { ar: 'على الصدغ الأيمن داخل غطاء يحجب الضوء.', en: 'On the right temple, inside a light-blocking pod.' },
+          why: { ar: 'النبض يهبط وHRV يرتفع في نوم NREM، لكنها لا تحدد مرحلة النوم وحدها.', en: 'Heart rate falls and HRV rises in NREM sleep, but it cannot identify sleep stages on its own.' } } },
+    { id: 'temp', color: '#ff9a3c', role: 'context', title: { ar: 'حرارة الجلد', en: 'Skin temperature' },
+      short: { measures: { ar: 'حرارة سطح الجلد', en: 'Skin surface temperature' }, where: { ar: 'الصدغ الأيسر', en: 'Left temple' }, why: { ar: 'معلومة سياق فقط', en: 'Context only' } },
+      full: { what: { ar: 'حرارة سطح الجلد كمعلومة سياق.', en: 'Skin surface temperature, as context.' },
+          where: { ar: 'قرص صغير على الصدغ الأيسر ملامس للجلد.', en: 'A small disc on the left temple, in skin contact.' },
+          why: { ar: 'لا يحدد مرحلة النوم وحده؛ تغيّرات حرارة الجبهة صغيرة وتختلف بين الأشخاص.', en: 'Not a sleep-stage classifier; forehead temperature changes are small and differ between people.' } } },
+    { id: 'audio', color: '#f2b62f', role: 'actuator', title: { ar: 'سماعتا توصيل عظمي', en: 'Bone-conduction speakers' },
+      short: { measures: { ar: 'إرشاد التنفس ونبضات صوت 50 ms', en: 'Breathing guide and 50 ms sound pulses' }, where: { ar: 'فوق الأذنين', en: 'Above both ears' }, why: { ar: 'الأذنان مفتوحتان لسماع إنذارات المحطة', en: 'Ears stay open for station alarms' } },
+      full: { what: { ar: 'إرشاد التنفس قبل النوم، ونبضة ضوضاء وردية قصيرة (50 ms) وخافتة في النوم العميق — فقط عندما يطلبها المساعد، وبعلو يتكيّف مع الرائد.', en: 'The breathing guide before sleep, and a short (50 ms), quiet pink-noise pulse in deep sleep — only when the assistant asks, at a volume that adapts to the astronaut.' },
+          where: { ar: 'على جانبي العصابة فوق الأذنين.', en: 'On both sides of the band, above the ears.' },
+          why: { ar: 'التوصيل العظمي لا يسدّ الأذن، فيبقى رائد الفضاء قادرًا على سماع إنذارات المحطة.', en: 'Bone conduction leaves the ears open, so the astronaut can still hear station alarms.' } } },
+];
+
+const SCIENCE = [
+    { ar: '<strong>المثبت والتجريبي:</strong> قياس النوم بعصابة EEG جافة استُخدم على محطة الفضاء (تجربة DREAMS 2021 و2023)، وجداول الإضاءة مستخدمة في المحطة. أما التحفيز الصوتي المغلق الحلقة فما زال بحثًا.', en: '<strong>Established vs experimental:</strong> measuring sleep with a dry-EEG headband has been used on the ISS (DREAMS, 2021 and 2023), and lighting schedules are used on the station. Closed-loop acoustic stimulation is still research.' },
+    { ar: '<strong>لا جهاز «يدفع» إلى النوم العميق:</strong> المساعد يزيل العوائق قبل النوم، ولا يزعج وقت الغفو، ثم يقوّي الموجات البطيئة عندما تبدأ وحدها. علو الصوت يتكيّف كما في أجهزة تجارية (مثل Philips SmartSleep).', en: '<strong>No device “pushes” anyone into deep sleep:</strong> the assistant removes obstacles before sleep, stays silent while falling asleep, then strengthens slow waves once they start. Volume adapts as in commercial devices (e.g. Philips SmartSleep).' },
+    { ar: '<strong>لماذا التوقيت مهم:</strong> صوت في توقيت قمة الموجة البطيئة قوّاها، وفي توقيت مختلف لم ينفع (Ngo 2013). نظام منزلي بنبضات 50 ms زاد نشاط الموجات البطيئة 16% عند الشباب ولم يغيّره عند الأكبر سنًا.', en: '<strong>Why timing matters:</strong> sound at the up-state of slow waves strengthened them; at other phases it did not help (Ngo 2013). A home system with 50 ms pulses raised slow-wave activity 16 % in young adults and not in older adults.' },
+    { ar: '<strong>حدود الأدلة:</strong> تحليل 16 دراسة وجد أن الفائدة الأوضح هي للذاكرة عند الشباب. وأصوات مزعجة رفعت الموجات البطيئة لكنها قطّعت النوم، وفي دراسة أخرى قلّلت النوم العميق 30%؛ لذلك الأولوية لنوم متصل.', en: '<strong>Limits of the evidence:</strong> a 16-study meta-analysis found the clearest benefit is for memory in young adults. Disruptive sounds raised slow waves but fragmented sleep, and in another study cut deep sleep by 30 % — so continuous sleep comes first.' },
+    { ar: '<strong>إرشاد التنفس:</strong> في دراسة صغيرة (14 شخصًا لديهم أرق) غفوا أسرع واستيقظوا أقل بعد 20 دقيقة تنفس بطيء قبل النوم. دليل أولي وليس قاطعًا.', en: '<strong>Breathing guide:</strong> in a small study (14 people with insomnia), 20 minutes of slow breathing before bed shortened time to sleep and reduced awakenings. Early evidence, not conclusive.' },
+    { ar: '<strong>الإضاءة:</strong> في دراسة HERA انتظمت الساعة البيولوجية أكثر وتحسّن أداء اختبارين معرفيين، لكن مدة النوم وسرعة الغفو لم تتغيرا. أوضاع إضاءة المحطة: قبل النوم ≈2700K و≤50 لوكس، عام ≈4500K، تنبيه ≈6500K.', en: '<strong>Lighting:</strong> in HERA the body clock stayed better aligned and two cognitive tests improved, but sleep duration and time to fall asleep did not change. ISS light modes: pre-sleep ≈2700 K at ≤50 lux, general ≈4500 K, alertness ≈6500 K.' },
+    { ar: '<strong>لماذا يهم:</strong> رواد الفضاء ينامون نحو 6 ساعات رغم جدولة 8.5، و75% من رواد المحطة استخدموا حبوب نوم — وهي تُضعف الاستجابة إذا دقّ إنذار طوارئ. وفي انعدام الجاذبية تدفع مروحة الهواء نحو الوجه كي لا يتجمع ثاني أكسيد الكربون المزفور حول الرأس.', en: '<strong>Why it matters:</strong> astronauts sleep about 6 h despite 8.5 h scheduled, and 75 % of ISS crew used sleeping pills — which can impair response if an emergency alarm sounds. In microgravity a fan blows air toward the face so exhaled CO₂ does not pool around the head.' },
+    { ar: '<strong>هذه الصفحة:</strong> كل القراءات مولّدة بمحرك محاكاة واحد متزامن؛ ليست تسجيلًا لشخص حقيقي. القصة ثابتة في كل عرض. استجابة الموجة بعد الصوت، والعلو الذي يوقظ هذا الرائد (7/10)، قيم توضيحية.', en: '<strong>This page:</strong> every reading comes from one synchronized simulation engine; it is not a recording of a real person. The story is the same on every run. The wave response after a sound, and the volume that wakes this astronaut (7/10), are illustrative values.' },
+];
+
+const SOURCES = [
+    ['https://research.bidmc.org/rhyme/publications/effects-dynamic-lighting-circadian-phase-self-reported-sleep-and-performance-during-45', { ar: 'الإضاءة الديناميكية في NASA HERA (2022)', en: 'Dynamic lighting in NASA HERA (2022)' }],
+    ['https://ntrs.nasa.gov/api/citations/20160006727/downloads/20160006727.pdf', { ar: 'NASA — أوضاع إضاءة المحطة', en: 'NASA — ISS lighting modes' }],
+    ['https://www.mediaoffice.ae/en/news/2023/july/16-07/sultan-alneyadi-successfully-executes-dreams', { ar: 'تجربة DREAMS على المحطة (2023)', en: 'DREAMS experiment on the ISS (2023)' }],
+    ['https://pubmed.ncbi.nlm.nih.gov/32433768/', { ar: 'عصابة EEG جافة مقارنة بتخطيط النوم (2020)', en: 'Dry-EEG headband vs polysomnography (2020)' }],
+    ['https://research.uni-luebeck.de/en/publications/auditory-closed-loop-stimulation-of-the-sleep-slow-oscillation-en/', { ar: 'التحفيز الصوتي المغلق الحلقة — Ngo 2013', en: 'Auditory closed-loop stimulation — Ngo 2013' }],
+    ['https://pubmed.ncbi.nlm.nih.gov/30215604/', { ar: 'نظام منزلي يزيد الموجات البطيئة (2018)', en: 'Home system boosting slow waves (2018)' }],
+    ['https://images.philips.com/is/content/PhilipsConsumer/Campaigns/HC20140401_DG/Documents/smartsleep-whitepaper.pdf', { ar: 'Philips SmartSleep — كشف النوم العميق وتعديل العلو', en: 'Philips SmartSleep — deep-sleep detection and volume' }],
+    ['https://orca.cardiff.ac.uk/id/eprint/150873/1/jsr.13676.pdf', { ar: 'تحليل 16 دراسة (2022)', en: 'Meta-analysis of 16 studies (2022)' }],
+    ['https://www.physiologie.unibe.ch/PublicationPDF/Fehér2023Feasibilit.pdf', { ar: 'أصوات تقلّل النوم العميق 30% (2023)', en: 'Sounds cutting deep sleep by 30 % (2023)' }],
+    ['https://pubmed.ncbi.nlm.nih.gov/37660843/', { ar: 'التحفيز الصوتي: الأسس وأفضل الممارسات (2023)', en: 'Closed-loop stimulation: best practices (2023)' }],
+    ['https://pubmed.ncbi.nlm.nih.gov/30761030/', { ar: 'التنفس البطيء للأرق (2019)', en: 'Slow breathing for insomnia (2019)' }],
+    ['https://www.ncbi.nlm.nih.gov/books/NBK526132/', { ar: 'مراحل النوم — StatPearls', en: 'Sleep stages — StatPearls' }],
+    ['https://ntrs.nasa.gov/citations/20100017014', { ar: 'NASA — تهوية وصوتيات مقصورة النوم', en: 'NASA — crew quarters ventilation and acoustics' }],
+    ['https://www.sciencedaily.com/releases/2014/08/140807215803.htm', { ar: 'نوم الرواد وحبوب النوم (2014)', en: 'Astronaut sleep and sleeping pills (2014)' }],
+];
+
+// ================================================================ timeline (mission clock, minutes from 19:30)
+const CLOCK0 = 19 * 60 + 30;
+const BED = 210;                 // 23:00
+const WAKE_RAMP = [670, 690];    // 06:40 → 07:00
+const END = 720;                 // 07:30
+const PLAN = [
+    ['W', 14], ['N1', 8], ['N2', 18], ['N3', 35], ['N2', 10], ['REM', 10],
+    ['N1', 3], ['N2', 25], ['N3', 25], ['N2', 12], ['REM', 20],
+    ['W', 3], ['N1', 4], ['N2', 35], ['N3', 10], ['N2', 15], ['REM', 25],
+    ['N1', 3], ['N2', 40], ['REM', 30],
+    ['W', 2], ['N1', 4], ['N2', 35], ['REM', 32],
+    ['N2', 25], ['REM', 15], ['N1', 10],
+];
+const SEGMENTS = [{ stage: 'W', from: 0, to: BED }];
+{ let m = BED; for (const [stage, d] of PLAN) { SEGMENTS.push({ stage, from: m, to: m + d }); m += d; } SEGMENTS.push({ stage: 'W', from: m, to: END }); }
+const SLEEP_END = SEGMENTS[SEGMENTS.length - 1].from;   // 06:48
+const FIRST_N3 = SEGMENTS.find((s) => s.stage === 'N3').from;
+const AROUSALS = [BED + 128, BED + 236, BED + 322, BED + 395];   // natural micro-arousals during N2
+// story chapters: where each one starts when its step is clicked
+const CHAPTERS = [
+    { id: 'before', at: 20 },                                // 19:50 — bright day light, drops at 20:00
+    { id: 'falling', at: BED - 26 },                         // 22:34 — breathing guide, lights out, alpha → theta
+    { id: 'deep', at: FIRST_N3 + 2, vol: 3 },                // 23:42 — slow waves, sounds, volume climbs
+    { id: 'waking', at: FIRST_N3 + 16, vol: 6, quiet: 1 },   // 23:56 — volume reaches 7 and wakes him
+    { id: 'morning', at: WAKE_RAMP[0] - 3 },                 // 06:37 — dawn
+];
+const segAt = (m) => SEGMENTS.find((s) => m >= s.from && m < s.to) ?? SEGMENTS[SEGMENTS.length - 1];
+function modeAt(m) {
+    const s = segAt(m);
+    if (s.stage !== 'W') return s.stage;
+    if (m < BED - 30) return 'active';
+    if (m < BED) return 'winddown';
+    if (m >= SLEEP_END) return 'morning';
+    return 'relaxed';
+}
+const fmtClock = (m) => { const t = (CLOCK0 + Math.floor(m)) % 1440; return `${String(Math.floor(t / 60)).padStart(2, '0')}:${String(t % 60).padStart(2, '0')}`; };
+const fmtDur = (min) => { const h = Math.floor(min / 60), mm = Math.floor(min % 60); return lang === 'ar' ? (h ? `${h} س ${mm} د` : `${mm} د`) : (h ? `${h} h ${mm} min` : `${mm} min`); };
+
+function lightAt(m, dynamic) {
+    const ramp = (a, b, f) => a + (b - a) * Math.min(1, Math.max(0, f));
+    if (!dynamic) {
+        if (m < BED) return { phase: 'static_on', cct: 4000, b: 0.33 };
+        if (m < WAKE_RAMP[1]) return { phase: 'static_off', cct: 4000, b: m < BED + 0.5 ? ramp(0.33, 0, (m - BED) / 0.5) : 0 };
+        return { phase: 'static_on', cct: 4000, b: 0.33 };
+    }
+    if (m < 30) return { phase: 'day', cct: 6000, b: 1 };
+    if (m < 150) return { phase: 'pre1', cct: ramp(6000, 4000, (m - 30) / 5), b: ramp(1, 0.04, (m - 30) / 5) };
+    if (m < BED) return { phase: 'pre2', cct: ramp(4000, 3000, (m - 150) / 5), b: 0.04 };
+    if (m < WAKE_RAMP[0]) return { phase: 'sleep', cct: 3000, b: m < BED + 0.5 ? ramp(0.04, 0, (m - BED) / 0.5) : 0 };
+    if (m < WAKE_RAMP[1]) { const f = (m - WAKE_RAMP[0]) / 20; return { phase: 'wake', cct: ramp(3000, 6000, f), b: f * f }; }
+    return { phase: 'day', cct: 6000, b: 1 };
+}
+const LIGHT_CHANGES = { true: [30, 150, BED, WAKE_RAMP[0], WAKE_RAMP[1]], false: [BED, WAKE_RAMP[1]] };
+function kelvinRGB(k) {   // Tanner Helland approximation, 0..255
+    const t = k / 100; let r, g, b;
+    if (t <= 66) { r = 255; g = 99.4708025861 * Math.log(t) - 161.1195681661; b = t <= 19 ? 0 : 138.5177312231 * Math.log(t - 10) - 305.0447927307; }
+    else { r = 329.698727446 * (t - 60) ** -0.1332047592; g = 288.1221695283 * (t - 60) ** -0.0755148492; b = 255; }
+    const c = (v) => Math.max(0, Math.min(255, v));
+    return [c(r), c(g), c(b)];
+}
+
+// ================================================================ state
+const params = new URLSearchParams(location.search);
+const saved = (() => { try { return localStorage.getItem('orbitcare-sleep-lang'); } catch { return null; } })();
+// ?lang=ar|en (links from the OrbitCare menu) wins over the remembered choice.
+let lang = (['ar', 'en'].includes(params.get('lang')) ? params.get('lang') : saved) === 'en' ? 'en' : 'ar';
+const SPEED_MIN = 10, SPEED_MAX = 900;
+const sliderToSpeed = (v) => Math.round(SPEED_MIN * (SPEED_MAX / SPEED_MIN) ** (v / 100));
+const speedToSlider = (s) => Math.round(100 * Math.log(s / SPEED_MIN) / Math.log(SPEED_MAX / SPEED_MIN));
+let speed = Math.min(SPEED_MAX, Math.max(SPEED_MIN, Number(params.get('speed')) || 60));
+let simMin = 0, started = false, running = false, finished = false;
+let stimEnabled = true, lightDynamic = true, hearPulses = false, selected = 'eeg', cardOpen = true, detailsOpen = false;
+if (params.get('at')) { const [h, mm] = params.get('at').split(':').map(Number); simMin = Math.max(0, Math.min(END - 1, ((h * 60 + (mm || 0)) - CLOCK0 + 1440) % 1440)); }
+let lastMinute = Math.floor(simMin) - 1;
+const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+const tr = (k, vars) => { let s = UI[lang][k]; if (vars) for (const [a, b] of Object.entries(vars)) s = s.replace(`{${a}}`, b); return s; };
+const fill = (s, vars) => { for (const [a, b] of Object.entries(vars)) s = s.replace(`{${a}}`, b); return s; };
+const esc = (v) => String(v).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+// seeded randomness: the same story on every run (reseeded on restart and chapter jumps)
+let seed = 20261114;
+const rand = () => { seed |= 0; seed = (seed + 0x6D2B79F5) | 0; let t = Math.imul(seed ^ (seed >>> 15), 1 | seed); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+
+// ================================================================ physiology engine (real speed)
+const FS = 128, BUF = 1024;
+const eegBuf = new Float32Array(BUF), eogBuf = new Float32Array(BUF), ppgBuf = new Float32Array(BUF);
+let n = 0, tReal = 0;
+const markers = [];
+const TARGETS = {
+    active:   { beta: 1, alpha: 0.12, theta: 0.2, so: 0, spin: 0, kc: 0, vertex: 0, saw: 0, rem: 0, blink: 1, slowEye: 0 },
+    winddown: { beta: 0.65, alpha: 0.45, theta: 0.25, so: 0, spin: 0, kc: 0, vertex: 0, saw: 0, rem: 0, blink: 0.6, slowEye: 0 },
+    relaxed:  { beta: 0.35, alpha: 1, theta: 0.25, so: 0, spin: 0, kc: 0, vertex: 0, saw: 0, rem: 0, blink: 0.08, slowEye: 0.1 },
+    N1:       { beta: 0.2, alpha: 0.22, theta: 1, so: 0.08, spin: 0, kc: 0, vertex: 1, saw: 0, rem: 0, blink: 0, slowEye: 1 },
+    N2:       { beta: 0.1, alpha: 0.05, theta: 0.8, so: 0.25, spin: 1, kc: 1, vertex: 0, saw: 0, rem: 0, blink: 0, slowEye: 0 },
+    N3:       { beta: 0.4, alpha: 0.3, theta: 2.0, so: 1, spin: 0.35, kc: 0, vertex: 0, saw: 0, rem: 0, blink: 0, slowEye: 0 },
+    REM:      { beta: 0.45, alpha: 0.18, theta: 0.9, so: 0, spin: 0, kc: 0, vertex: 0, saw: 1, rem: 1, blink: 0, slowEye: 0 },
+    morning:  { beta: 1, alpha: 0.2, theta: 0.2, so: 0, spin: 0, kc: 0, vertex: 0, saw: 0, rem: 0, blink: 1, slowEye: 0 },
+};
+const VITALS = {   // heart rate (bpm), RMSSD (ms), breathing (/min), head pitch (rad) — illustrative
+    active: [72, 32, 15, 0.02], winddown: [68, 35, 14, 0.06], relaxed: [65, 38, 14, 0.1], N1: [62, 42, 13.5, 0.14],
+    N2: [58, 50, 13, 0.16], N3: [55, 60, 12, 0.18], REM: [63, 36, 15, 0.17], morning: [70, 34, 15, 0.0],
+};
+const w = { ...TARGETS.active };
+const G = {
+    ph: { a: 0, t1: 0, t2: 0, b1: 0, b2: 0, b3: 0, resp: 0 },
+    so: { ph: 0, f: 0.85, A: 70, boost: 1, boostNext: false },
+    spin: { start: -9, dur: 1, amp: 20, next: 2, forced: false },
+    kc: { start: -9, next: 6 }, vx: { start: -9, next: 3 }, saw: { start: -9, dur: 0, next: 4 },
+    rem: { burstEnd: -1, nextBurst: 2, nextSac: 0, pos: 0, target: 0 },
+    eye: { pos: 0, target: 0, nextSac: 0.5 }, blink: { start: -9, next: 1.5 },
+    pink: 0, arousalUntil: -1,
+};
+const heart = { hr: 72, rmssd: 32, next: 0.3, last: -1, prev: -2, rr: [] };
+let breathRate = 15, modeNow = 'active';
+
+// Deep-sleep assistant: breathing guide + adaptive volume that learns this astronaut's limit.
+const VOL_MAX = 8, VOL_WAKES = 7;   // simulation: from volume 7 this astronaut wakes (the system has to find it)
+const assist = { guide: false, vol: 3, quiet: 0, best: 0, bad: null, cap: VOL_MAX, stimWakes: 0, natWakes: 0, lastWake: null, learnedAt: -1e9 };
+function startArousal(byStim) {
+    if (tReal < G.arousalUntil) return;
+    G.arousalUntil = tReal + 3.5;
+    if (modeNow === 'N2' || modeNow === 'N3') { assist.vol = Math.max(1, assist.vol - 2); assist.quiet = 0; }
+    if (byStim) { assist.stimWakes++; assist.bad = assist.bad == null ? assist.lastWake : Math.min(assist.bad, assist.lastWake); assist.cap = assist.bad - 1; assist.learnedAt = tReal + 3.5; }
+    else assist.natWakes++;
+}
+
+const gauss = () => { let u = 0; for (let i = 0; i < 6; i++) u += rand(); return u - 3; };
+const kcShape = (d) => -85 * Math.exp(-(((d - 0.3) / 0.11) ** 2)) + 40 * Math.exp(-(((d - 0.72) / 0.16) ** 2));
+const vxShape = (d) => -42 * Math.exp(-(((d - 0.12) / 0.05) ** 2)) + 14 * Math.exp(-(((d - 0.26) / 0.06) ** 2));
+const pulseShape = (d) => (d < 0 ? 0 : Math.exp(-(((d - 0.12) / 0.06) ** 2)) + 0.35 * Math.exp(-(((d - 0.36) / 0.09) ** 2)));
+
+const THR = -40;   // µV, simulation parameter
+const det = { state: 'idle', prev: 0, zc: 0, trough: 0, troughT: 0, fireAt: 0, until: 0, step: 0, count: 0, lastAmp: null, postMin: 0, response: null };
+
+function stepSample() {
+    const t = tReal, target = TARGETS[modeNow];
+    const k = 1 - Math.exp(-1 / (FS * 1.2));
+    for (const key in w) w[key] += (target[key] - w[key]) * k;
+    const arousal = t < G.arousalUntil;
+    const P = G.ph, TAU = Math.PI * 2;
+    P.a += TAU * 10 / FS; P.t1 += TAU * 5.4 / FS; P.t2 += TAU * 6.7 / FS;
+    P.b1 += TAU * 16.5 / FS; P.b2 += TAU * 21 / FS; P.b3 += TAU * 26.5 / FS;
+    P.resp += TAU * (breathRate / 60) / FS;
+    let v = 0;
+    const betaW = arousal ? Math.max(w.beta, 0.9) : w.beta, alphaW = arousal ? Math.max(w.alpha, 0.8) : w.alpha;
+    v += betaW * (4 * Math.sin(P.b1) + 3.4 * Math.sin(P.b2) + 2.8 * Math.sin(P.b3));
+    v += alphaW * 22 * (0.6 + 0.4 * Math.sin(TAU * 0.23 * t)) * Math.sin(P.a);
+    v += w.theta * (9 * Math.sin(P.t1) + 7 * Math.sin(P.t2)) * (0.7 + 0.3 * Math.sin(TAU * 0.17 * t));
+    const so = G.so;   // slow oscillation: down-state first, then up-state
+    so.ph += TAU * so.f / FS;
+    if (so.ph >= TAU) { so.ph -= TAU; so.f = 0.7 + rand() * 0.4; so.boost = so.boostNext ? 1.2 + rand() * 0.08 : 1; so.boostNext = false; so.A = (55 + rand() * 50) * so.boost; }
+    const soVal = -so.A * w.so * Math.sin(so.ph);
+    v += soVal;
+    const sp = G.spin;
+    if (t >= sp.next && w.spin > 0.2) { sp.start = t; sp.dur = 0.7 + rand() * 0.6; sp.amp = 18 + rand() * 10; sp.forced = false; sp.next = t + (w.so > 0.6 ? 6 : 3.5) + rand() * 5; }
+    if (t >= sp.start && t <= sp.start + sp.dur) { const d = t - sp.start; v += (sp.forced ? Math.max(w.spin, 0.6) : w.spin) * sp.amp * Math.sin(Math.PI * d / sp.dur) ** 2 * Math.sin(TAU * 13 * d); }
+    if (w.kc > 0.5 && t >= G.kc.next) { G.kc.start = t; G.kc.next = t + 12 + rand() * 18; if (rand() < 0.6) { sp.start = t + 0.8; sp.dur = 0.9; sp.amp = 20; } }
+    const kcVal = t - G.kc.start < 1.2 ? w.kc * kcShape(t - G.kc.start) : 0;
+    v += kcVal;
+    if (w.vertex > 0.5 && t >= G.vx.next) { G.vx.start = t; G.vx.next = t + 3 + rand() * 4; }
+    if (t - G.vx.start < 0.5) v += w.vertex * vxShape(t - G.vx.start);
+    if (w.saw > 0.5 && t >= G.saw.next) { G.saw.start = t; G.saw.dur = 1.5 + rand() * 1.5; G.saw.next = t + 4 + rand() * 5; }
+    if (t >= G.saw.start && t <= G.saw.start + G.saw.dur) { const d = t - G.saw.start, f = (3 * d) % 1; v += w.saw * 16 * (f < 0.8 ? f / 0.8 * 2 - 1 : 1 - (f - 0.8) / 0.2 * 2) * Math.sin(Math.PI * d / G.saw.dur); }
+    G.pink = 0.96 * G.pink + (rand() - 0.5);
+    v += 1.4 * G.pink + 3 * (rand() - 0.5);
+    if (arousal) { const d = G.arousalUntil - t; v += 45 * Math.sin(TAU * 1.1 * t) * Math.min(1, d) + 18 * (rand() - 0.5); }
+    // EOG
+    let e = 0;
+    const eye = G.eye;
+    if (w.blink > 0.3 || arousal) {
+        if (t >= eye.nextSac) { eye.target = (rand() * 2 - 1) * 70; eye.nextSac = t + 0.3 + rand(); }
+        if (t >= G.blink.next) { G.blink.start = t; G.blink.next = t + 2 + rand() * 3.5; }
+    } else eye.target *= 0.999;
+    eye.pos += (eye.target - eye.pos) * (1 - Math.exp(-1 / (FS * 0.03)));
+    const lids = Math.min(1, w.blink + (arousal ? 1 : 0));
+    e += eye.pos * lids;
+    if (t - G.blink.start < 0.4) e += lids * 190 * Math.exp(-(((t - G.blink.start - 0.15) / 0.07) ** 2));
+    e += w.slowEye * 65 * Math.sin(TAU * 0.28 * t);
+    const rm = G.rem;
+    if (w.rem > 0.5) {
+        if (t >= rm.nextBurst) { rm.burstEnd = t + 1 + rand() * 2; rm.nextBurst = t + 3 + rand() * 6; }
+        if (t < rm.burstEnd && t >= rm.nextSac) { rm.target = (rand() * 2 - 1) * 110; rm.nextSac = t + 0.2 + rand() * 0.4; }
+        if (t >= rm.burstEnd) rm.target *= 0.998;
+    } else rm.target *= 0.99;
+    rm.pos += (rm.target - rm.pos) * (1 - Math.exp(-1 / (FS * 0.025)));
+    e += w.rem * rm.pos + 0.35 * soVal + 0.2 * kcVal + 3 * (rand() - 0.5);
+    if (arousal) e += 60 * Math.sin(TAU * 0.9 * t);
+    // PPG from simulated beats
+    while (t >= heart.next) {
+        heart.prev = heart.last; heart.last = heart.next;
+        const base = 60000 / heart.hr, rsa = (0.6 * heart.rmssd) / (0.91 * base), sigma = (0.8 * heart.rmssd) / Math.SQRT2;
+        const rrMs = Math.max(350, base * (1 + rsa * Math.sin(P.resp)) + sigma * gauss() * 0.8);
+        heart.rr.push(rrMs); if (heart.rr.length > 40) heart.rr.shift();
+        heart.next += rrMs / 1000;
+    }
+    const i = n % BUF;
+    eegBuf[i] = v; eogBuf[i] = e; ppgBuf[i] = pulseShape(t - heart.last) + pulseShape(t - heart.prev);
+    detect(v, t);
+    n++; tReal += 1 / FS;
+}
+
+function stimEligibility() {
+    if (!stimEnabled) return 'off';
+    if (modeNow !== 'N2' && modeNow !== 'N3') return started && simMin >= BED ? 'stage' : 'wait';
+    if (tReal < G.arousalUntil || imu.move > 6) return 'arousal';
+    if (bands.delta < 0.4) return 'lowdelta';
+    return 'ok';
+}
+function detect(v, t) {
+    if (stimEligibility() !== 'ok') { det.state = 'idle'; det.step = 0; det.prev = v; return; }
+    if (det.state === 'refractory') {
+        if (t < det.until - 0.8) det.postMin = Math.min(det.postMin, v);
+        if (t >= det.until) { det.state = 'idle'; det.step = 1; if (det.lastAmp) det.response = det.postMin / det.lastAmp - 1; }
+    } else if (det.state === 'idle') {
+        det.step = 1;
+        if (det.prev >= 0 && v < 0) det.zc = t;
+        if (v < THR) { det.state = 'down'; det.trough = v; det.troughT = t; det.step = 2; }
+    } else if (det.state === 'down') {
+        if (v < det.trough) { det.trough = v; det.troughT = t; }
+        else if (v > det.trough + 10) {
+            const q = Math.min(0.5, Math.max(0.15, det.troughT - det.zc));   // quarter period: zero crossing → trough
+            det.fireAt = det.troughT + 2 * q;                                   // predicted up-state peak
+            markers.push({ i: n - Math.round((t - det.troughT) * FS), type: 'trough' });
+            det.state = 'wait'; det.step = 3;
+        }
+    } else if (det.state === 'wait' && t >= det.fireAt) {
+        markers.push({ i: n, type: 'pulse' });
+        det.count++; det.step = 4;
+        G.so.boostNext = true;
+        G.spin.start = t + 0.05; G.spin.dur = 0.8; G.spin.amp = 22; G.spin.forced = true;
+        det.lastAmp = det.trough; det.postMin = 0;
+        det.until = t + 2.5; det.state = 'refractory';
+        onPulse();
+        // adaptive volume: two quiet pulses → one step up (never above what it learned); a pulse that wakes him → stop, two steps down
+        if (assist.vol >= VOL_WAKES) { assist.lastWake = assist.vol; startArousal(true); }
+        else { assist.best = Math.max(assist.best, assist.vol); if (++assist.quiet >= 2) { assist.vol = Math.min(VOL_MAX, assist.cap, assist.vol + 1); assist.quiet = 0; } }
+        setTimeout(() => { if (det.state === 'refractory') det.step = 5; }, 260);
+    }
+    det.prev = v;
+    while (markers.length && markers[0].i < n - BUF) markers.shift();
+}
+
+const bands = { delta: 0.25, theta: 0.25, alpha: 0.25, beta: 0.25 };
+const FN = 512, re = new Float64Array(FN), im = new Float64Array(FN);
+function fft(xr, xi) {
+    const N = xr.length;
+    for (let i = 1, j = 0; i < N; i++) { let bit = N >> 1; for (; j & bit; bit >>= 1) j ^= bit; j ^= bit; if (i < j) { [xr[i], xr[j]] = [xr[j], xr[i]]; [xi[i], xi[j]] = [xi[j], xi[i]]; } }
+    for (let len = 2; len <= N; len <<= 1) {
+        const ang = -2 * Math.PI / len, wr = Math.cos(ang), wi = Math.sin(ang);
+        for (let i = 0; i < N; i += len) {
+            let cr = 1, ci = 0;
+            for (let j = 0; j < len / 2; j++) {
+                const ar = xr[i + j], ai = xi[i + j], br = xr[i + j + len / 2] * cr - xi[i + j + len / 2] * ci, bi = xr[i + j + len / 2] * ci + xi[i + j + len / 2] * cr;
+                xr[i + j] = ar + br; xi[i + j] = ai + bi; xr[i + j + len / 2] = ar - br; xi[i + j + len / 2] = ai - bi;
+                const ncr = cr * wr - ci * wi; ci = cr * wi + ci * wr; cr = ncr;
+            }
+        }
+    }
+}
+function updateBands() {
+    if (n < FN) return;
+    let mean = 0;
+    for (let k = 0; k < FN; k++) mean += eegBuf[(n - FN + k) % BUF];
+    mean /= FN;
+    for (let k = 0; k < FN; k++) { re[k] = (eegBuf[(n - FN + k) % BUF] - mean) * (0.5 - 0.5 * Math.cos(2 * Math.PI * k / (FN - 1))); im[k] = 0; }
+    fft(re, im);
+    const df = FS / FN, sum = (a, b) => { let s = 0; for (let k = Math.ceil(a / df); k < Math.floor(b / df); k++) s += re[k] * re[k] + im[k] * im[k]; return s; };
+    const p = { delta: sum(0.5, 4), theta: sum(4, 8), alpha: sum(8, 13), beta: sum(13, 30) };
+    const total = p.delta + p.theta + p.alpha + p.beta || 1;
+    for (const key in p) bands[key] += (p[key] / total - bands[key]) * 0.5;
+}
+const imu = { pitch: 0, yaw: 0, roll: 0, move: 0 };
+
+// ================================================================ 3D scene — matte white sculpted compartment, night-blue ambience
+const stage = document.querySelector('[data-stage]');
+const canvas = document.querySelector('[data-canvas]');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true, preserveDrawingBuffer: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.0;
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(34, 1, 0.05, 40);
+const VIEW = { pos: new THREE.Vector3(0.62, 0.92, 2.25), target: new THREE.Vector3(-0.08, 0.6, -0.18) };
+camera.position.copy(VIEW.pos);
+const controls = new OrbitControls(camera, canvas);
+controls.target.copy(VIEW.target);
+controls.enablePan = false; controls.enableDamping = true;
+controls.minDistance = 0.45; controls.maxDistance = 4.6;
+controls.minAzimuthAngle = -0.9; controls.maxAzimuthAngle = 1.05;
+controls.minPolarAngle = 0.85; controls.maxPolarAngle = 2.05;
+
+function canvasTexture(size, draw, repeat) {
+    const c = document.createElement('canvas'); c.width = c.height = size;
+    draw(c.getContext('2d'), size);
+    const tex = new THREE.CanvasTexture(c);
+    tex.wrapS = tex.wrapT = THREE.RepeatWrapping; tex.repeat.set(...repeat); tex.anisotropy = 8;
+    return tex;
+}
+const speckle = canvasTexture(256, (g, s) => { g.fillStyle = '#808080'; g.fillRect(0, 0, s, s); for (let i = 0; i < 2600; i++) { g.fillStyle = rand() < 0.5 ? '#787878' : '#888888'; g.fillRect(rand() * s, rand() * s, 2, 2); } }, [3, 3]);
+const fabric = canvasTexture(128, (g, s) => { g.fillStyle = '#808080'; g.fillRect(0, 0, s, s); for (let y = 0; y < s; y += 3) { g.fillStyle = y % 6 ? '#8a8a8a' : '#767676'; g.fillRect(0, y, s, 1); } }, [14, 30]);
+const webbing = canvasTexture(64, (g, s) => { g.fillStyle = '#808080'; g.fillRect(0, 0, s, s); for (let x = 0; x < s; x += 4) { g.fillStyle = '#727272'; g.fillRect(x, 0, 1, s); } }, [8, 1]);
+const strands = canvasTexture(256, (g, s) => { g.fillStyle = '#808080'; g.fillRect(0, 0, s, s); for (let i = 0; i < 500; i++) { const x = rand() * s; g.strokeStyle = rand() < 0.5 ? '#6c6c6c' : '#969696'; g.beginPath(); g.moveTo(x, 0); g.bezierCurveTo(x + 6, s * 0.3, x - 6, s * 0.7, x + 3, s); g.stroke(); } }, [6, 2]);
+const pleats = canvasTexture(128, (g, s) => { for (let y = 0; y < s; y++) { const v = 110 + 60 * Math.sin(y / s * Math.PI * 12); g.fillStyle = `rgb(${v},${v},${v})`; g.fillRect(0, y, s, 1); } }, [1, 1]);
+
+const clay = (color, rough = 0.85, bump = speckle, bumpScale = 0.12) => new THREE.MeshStandardMaterial({ color, roughness: rough, bumpMap: bump, bumpScale });
+const M = {
+    wall: clay(0xededee), panel: clay(0xf4f4f5, 0.8), trim: clay(0xe2e3e6, 0.7), recess: clay(0xd9dade, 0.9),
+    bag: clay(0xf5f5f6, 0.92, fabric, 0.5), strap: clay(0xe9eaec, 0.75, webbing, 0.6), buckle: clay(0xe0e1e4, 0.5),
+    suit: clay(0xf1f1f2, 0.88, fabric, 0.3), skin: clay(0xf3f2f1, 0.62, speckle, 0.05), hair: clay(0xe8e8e9, 0.9, strands, 0.9),
+    pod: new THREE.MeshPhysicalMaterial({ color: 0x2b2f3d, roughness: 0.35, clearcoat: 0.6, clearcoatRoughness: 0.3 }),
+    band: new THREE.MeshStandardMaterial({ color: 0x343956, roughness: 0.8, bumpMap: webbing, bumpScale: 0.4, side: THREE.DoubleSide }),
+};
+const glowMat = (hex) => new THREE.MeshBasicMaterial({ color: new THREE.Color(hex), toneMapped: false });
+const latheMesh = (points, material, segments = 64) => new THREE.Mesh(new THREE.LatheGeometry(points.slice().sort((p, q) => p[1] - q[1]).map(([r, y]) => new THREE.Vector2(r, y)), segments), material);   // bottom → top
+const tube = (points, radius, material, closed = false) => new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(points, closed), Math.max(24, points.length * 3), radius, 10, closed), material);
+function orient(mesh, normal) {
+    const across = new THREE.Vector3(0, 1, 0).cross(normal).normalize();
+    const down = new THREE.Vector3().crossVectors(across, normal);
+    mesh.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(across, normal, down));
+}
+function housing(wd, h, d, radius = 0.01, bevel = 0.0025) {
+    const s = new THREE.Shape();
+    const x = -wd / 2, y = -h / 2, r = Math.min(radius, wd / 2, h / 2);
+    s.moveTo(x + r, y); s.lineTo(x + wd - r, y); s.quadraticCurveTo(x + wd, y, x + wd, y + r);
+    s.lineTo(x + wd, y + h - r); s.quadraticCurveTo(x + wd, y + h, x + wd - r, y + h);
+    s.lineTo(x + r, y + h); s.quadraticCurveTo(x, y + h, x, y + h - r);
+    s.lineTo(x, y + r); s.quadraticCurveTo(x, y, x + r, y);
+    const geo = new THREE.ExtrudeGeometry(s, { depth: Math.max(0.001, d - 2 * bevel), bevelEnabled: true, bevelThickness: bevel, bevelSize: bevel, bevelSegments: 3, curveSegments: 10 });
+    geo.translate(0, 0, -(d - 2 * bevel) / 2); geo.rotateX(-Math.PI / 2);
+    return geo;
+}
+function plate(x, y, z, wd, h, d, normal, mat = M.panel, radius = 0.04) {
+    const m = new THREE.Mesh(housing(wd, h, d, radius, Math.min(0.012, d / 3)), mat);
+    m.position.set(x, y, z); if (Math.abs(normal.y) < 0.99) orient(m, normal); else if (normal.y < 0) m.rotation.x = Math.PI;
+    m.receiveShadow = true; scene.add(m); return m;
+}
+const FRONT = new THREE.Vector3(0, 0, 1), RIGHT = new THREE.Vector3(1, 0, 0);
+
+// room: x −1.3…1.15, floor −1.15, ceiling 1.9 (curved corner on the left), back wall z −0.45, open front
+const RX0 = -1.3, RX1 = 1.15, RY0 = -1.15, RY1 = 1.9, RZ0 = -0.45, RZ1 = 1.25, ARC = 0.55;
+{
+    const s = new THREE.Shape();
+    s.moveTo(RX0, RY0); s.lineTo(RX0, RY1 - ARC); s.absarc(RX0 + ARC, RY1 - ARC, ARC, Math.PI, Math.PI / 2, true); s.lineTo(RX1, RY1);
+    s.lineTo(RX1, RY1 + 0.06); s.lineTo(RX0 + ARC, RY1 + 0.06); s.absarc(RX0 + ARC, RY1 - ARC, ARC + 0.06, Math.PI / 2, Math.PI, false); s.lineTo(RX0 - 0.06, RY0); s.closePath();
+    const shell = new THREE.Mesh(new THREE.ExtrudeGeometry(s, { depth: RZ1 - RZ0, bevelEnabled: false, curveSegments: 32 }), M.wall);
+    shell.position.z = RZ0; shell.receiveShadow = true; scene.add(shell);
+    const back = new THREE.Mesh(new THREE.BoxGeometry(RX1 - RX0 + 0.1, RY1 - RY0 + 0.1, 0.06), M.wall); back.position.set((RX0 + RX1) / 2, (RY0 + RY1) / 2, RZ0 - 0.03); back.receiveShadow = true; scene.add(back);
+    const floor = new THREE.Mesh(new THREE.BoxGeometry(RX1 - RX0 + 0.1, 0.06, RZ1 - RZ0), M.wall); floor.position.set((RX0 + RX1) / 2, RY0 - 0.03, (RZ0 + RZ1) / 2); floor.receiveShadow = true; scene.add(floor);
+    const right = new THREE.Mesh(new THREE.BoxGeometry(0.06, RY1 - RY0 + 0.1, RZ1 - RZ0), M.wall); right.position.set(RX1 + 0.03, (RY0 + RY1) / 2, (RZ0 + RZ1) / 2); right.receiveShadow = true; scene.add(right);
+    for (const x of [-0.75, 0.0, 0.75]) plate(x, RY0 + 0.012, 0.35, 0.7, 1.45, 0.024, new THREE.Vector3(0, 1, 0), M.panel, 0.05);
+}
+const PLATE = { x: 0.0, y: 0.32, w: 1.06, h: 2.72 };
+plate(PLATE.x, PLATE.y, RZ0 + 0.018, PLATE.w + 0.08, PLATE.h + 0.08, 0.036, FRONT, M.trim, 0.1);
+plate(PLATE.x, PLATE.y, RZ0 + 0.04, PLATE.w, PLATE.h, 0.03, FRONT, M.panel, 0.08);
+for (const [bx, by] of [[-0.46, 1.6], [0.46, 1.6], [-0.46, -0.96], [0.46, -0.96]]) { const bolt = new THREE.Mesh(new THREE.CylinderGeometry(0.014, 0.014, 0.012, 20), M.trim); bolt.rotation.x = Math.PI / 2; bolt.position.set(bx, by, RZ0 + 0.062); scene.add(bolt); }
+plate(-0.84, 1.12, RZ0 + 0.02, 0.42, 0.34, 0.03, FRONT, M.panel);
+for (let k = 0; k < 5; k++) { const slat = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.018, 0.012), M.recess); slat.position.set(-0.84, 1.03 + k * 0.045, RZ0 + 0.042); scene.add(slat); }
+plate(-0.84, 0.22, RZ0 + 0.02, 0.36, 1.1, 0.03, FRONT, M.panel);
+plate(-0.84, 0.32, RZ0 + 0.04, 0.2, 0.6, 0.02, FRONT, M.recess, 0.03);
+for (const [x, y] of [[-0.88, 0.5], [-0.8, 0.5], [-0.88, 0.2], [-0.8, 0.2]]) plate(x, y, RZ0 + 0.054, 0.04, 0.03, 0.014, FRONT, M.trim, 0.006);
+{ const port = new THREE.Mesh(new THREE.TorusGeometry(0.03, 0.009, 12, 28), M.trim); port.position.set(-0.84, -0.18, RZ0 + 0.045); scene.add(port); }
+plate(0.86, 0.95, RZ0 + 0.02, 0.44, 1.35, 0.03, FRONT, M.panel);
+plate(0.86, 1.2, RZ0 + 0.04, 0.26, 0.32, 0.02, FRONT, M.panel, 0.03);
+plate(0.86, 0.55, RZ0 + 0.04, 0.3, 0.025, 0.014, FRONT, M.trim, 0.008);
+{ const r = new THREE.Mesh(new THREE.TorusGeometry(0.055, 0.012, 14, 36), M.trim); r.position.set(0.86, 0.05, RZ0 + 0.04); scene.add(r); }
+{
+    const nx = 0.86, ny = -0.6, z = RZ0 + 0.02;
+    plate(nx, ny, z, 0.4, 0.36, 0.03, FRONT, M.panel, 0.05);
+    const inner = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.26, 0.01), M.recess); inner.position.set(nx, ny, z + 0.02); scene.add(inner);
+    for (const [dx, dy, ww, hh] of [[0, 0.135, 0.32, 0.02], [0, -0.135, 0.32, 0.02], [-0.155, 0, 0.02, 0.29], [0.155, 0, 0.02, 0.29]]) { const b = new THREE.Mesh(new THREE.BoxGeometry(ww, hh, 0.09), M.panel); b.position.set(nx + dx, ny + dy, z + 0.06); scene.add(b); }
+    const shelf = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.02, 0.12), M.panel); shelf.position.set(nx, ny - 0.08, z + 0.07); scene.add(shelf);
+    const pouch = new THREE.Mesh(new THREE.SphereGeometry(0.065, 32, 24), M.panel); pouch.scale.y = 0.9; pouch.position.set(nx, ny - 0.01, z + 0.07); scene.add(pouch);
+    const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.03, 0.03, 24), M.trim); cap.position.set(nx, ny + 0.06, z + 0.07); scene.add(cap);
+    scene.add(tube([new THREE.Vector3(nx, ny + 0.07, z + 0.07), new THREE.Vector3(nx + 0.005, ny + 0.12, z + 0.07), new THREE.Vector3(nx + 0.02, ny + 0.15, z + 0.07)], 0.004, M.trim));
+}
+// porthole with a blue pleated shade that closes for the night
+const WIN = { y: 0.55, z: 0.38, r: 0.28 };
+const shadeMat = new THREE.MeshStandardMaterial({ color: 0x2f4fb8, roughness: 0.85, bumpMap: pleats, bumpScale: 1.4, transparent: true, opacity: 0 });
+let windowLight;
+{
+    const x = RX0 + 0.005;
+    const frame = new THREE.Mesh(new THREE.TorusGeometry(WIN.r + 0.04, 0.05, 20, 64), M.panel); frame.rotation.y = Math.PI / 2; frame.position.set(x + 0.03, WIN.y, WIN.z); frame.castShadow = true; scene.add(frame);
+    const flange = new THREE.Mesh(new THREE.CylinderGeometry(WIN.r + 0.005, WIN.r + 0.005, 0.07, 64, 1, true), M.trim); flange.rotation.z = Math.PI / 2; flange.position.set(x + 0.02, WIN.y, WIN.z); scene.add(flange);
+    for (let k = 0; k < 10; k++) { const a = k / 10 * Math.PI * 2, bolt = new THREE.Mesh(new THREE.SphereGeometry(0.009, 12, 8), M.trim); bolt.position.set(x + 0.075, WIN.y + Math.sin(a) * (WIN.r + 0.04), WIN.z + Math.cos(a) * (WIN.r + 0.04)); scene.add(bolt); }
+    const c = document.createElement('canvas'); c.width = c.height = 256; const g = c.getContext('2d');
+    g.fillStyle = '#070b18'; g.fillRect(0, 0, 256, 256);
+    for (let i = 0; i < 70; i++) { g.fillStyle = `rgba(255,255,255,${0.3 + rand() * 0.6})`; g.fillRect(rand() * 256, rand() * 150, 1.3, 1.3); }
+    const earth = g.createRadialGradient(128, 520, 300, 128, 520, 420); earth.addColorStop(0, '#2f6fb8'); earth.addColorStop(0.9, '#5f9ad8'); earth.addColorStop(0.97, '#bfe1ff'); earth.addColorStop(1, 'rgba(120,180,255,0)');
+    g.fillStyle = earth; g.beginPath(); g.arc(128, 520, 420, 0, Math.PI * 2); g.fill();
+    const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace;
+    const glass = new THREE.Mesh(new THREE.CircleGeometry(WIN.r, 64), new THREE.MeshBasicMaterial({ map: tex })); glass.rotation.y = Math.PI / 2; glass.position.set(x + 0.004, WIN.y, WIN.z); scene.add(glass);
+    const shade = new THREE.Mesh(new THREE.CircleGeometry(WIN.r, 64), shadeMat); shade.rotation.y = Math.PI / 2; shade.position.set(x + 0.012, WIN.y, WIN.z); scene.add(shade);
+    windowLight = new THREE.PointLight(0x9fb8ff, 0.25, 0, 0); windowLight.position.set(x + 0.25, WIN.y, WIN.z); scene.add(windowLight);
+    plate(x + 0.012, -0.55, 0.38, 0.9, 0.62, 0.03, RIGHT, M.panel, 0.06);
+    plate(x + 0.03, -0.62, 0.38, 0.6, 0.06, 0.016, RIGHT, M.trim, 0.02);
+    plate(x + 0.012, 0.55, -0.18, 0.2, 0.5, 0.03, RIGHT, M.panel, 0.05);
+}
+const lightFace = new THREE.MeshBasicMaterial({ color: 0xffffff, toneMapped: false });
+const stripMat = new THREE.MeshBasicMaterial({ color: 0xffffff, toneMapped: false });
+const LIGHT_POS = new THREE.Vector3(0.05, RY1 - 0.05, 0.35);
+{
+    const lp = new THREE.Mesh(housing(0.62, 0.36, 0.04, 0.04, 0.01), M.trim); lp.position.set(LIGHT_POS.x, RY1 - 0.02, LIGHT_POS.z); lp.rotation.x = Math.PI; scene.add(lp);
+    const face = new THREE.Mesh(new THREE.PlaneGeometry(0.54, 0.28), lightFace); face.position.set(LIGHT_POS.x, RY1 - 0.043, LIGHT_POS.z); face.rotation.x = Math.PI / 2; scene.add(face);
+    const strip = new THREE.Mesh(new THREE.BoxGeometry(RX1 - RX0 - ARC - 0.1, 0.014, 0.02), stripMat); strip.position.set((RX0 + ARC + RX1) / 2, RY1 - 0.03, RZ0 + 0.03); scene.add(strip);
+}
+const spot = new THREE.SpotLight(0xffffff, 0, 0, 1.0, 0.9, 0);
+spot.position.copy(LIGHT_POS); spot.target.position.set(0, 0.35, -0.3); spot.castShadow = true;
+spot.shadow.mapSize.set(1024, 1024); spot.shadow.bias = -0.0005; spot.shadow.normalBias = 0.02;
+scene.add(spot, spot.target);
+const cabinFill = new THREE.PointLight(0xffffff, 0, 0, 0); cabinFill.position.set(0.4, 1.3, 0.9); scene.add(cabinFill);
+const stripLight = new THREE.PointLight(0xffffff, 0, 0, 0); stripLight.position.set(0.1, RY1 - 0.15, RZ0 + 0.25); scene.add(stripLight);
+const cabinHemi = new THREE.HemisphereLight(0xffffff, 0x8890a8, 0); scene.add(cabinHemi);
+// night-blue viewing light so the scene reads in the dark (not part of the cabin lighting)
+scene.add(new THREE.HemisphereLight(0x8b9be0, 0x1e2340, 0.42));
+const viewKey = new THREE.DirectionalLight(0xb7c4f2, 0.42); viewKey.position.set(1.4, 2, 3.5); scene.add(viewKey);
+const rimLight = new THREE.DirectionalLight(0x6f7fe0, 0.35); rimLight.position.set(-2, 1.5, 0.5); scene.add(rimLight);
+
+// astronaut
+const astro = new THREE.Group(); scene.add(astro);
+const BAG_Z = -0.15, BAG_D = 0.6;
+const BAG = [[0, -1.03], [0.12, -1.01], [0.2, -0.96], [0.25, -0.86], [0.275, -0.6], [0.29, -0.3], [0.32, 0.0], [0.34, 0.24], [0.35, 0.4], [0.355, 0.46]];
+const lerpProfile = (prof, y) => { for (let i = 1; i < prof.length; i++) if (y <= prof[i][1]) return prof[i - 1][0] + (prof[i][0] - prof[i - 1][0]) * (y - prof[i - 1][1]) / (prof[i][1] - prof[i - 1][1]); return prof[prof.length - 1][0]; };
+const bagR = (y) => lerpProfile(BAG, y);
+const bag = latheMesh(BAG, M.bag, 80); bag.scale.z = BAG_D; bag.position.z = BAG_Z; bag.castShadow = true; bag.receiveShadow = true; astro.add(bag);
+const ringAround = (y, r, d, zc, radius, mat) => tube(Array.from({ length: 65 }, (_, i) => { const a = i / 64 * Math.PI * 2; return new THREE.Vector3(Math.sin(a) * r, y, zc + Math.cos(a) * r * d); }), radius, mat, true);
+astro.add(ringAround(0.47, 0.35, BAG_D, BAG_Z, 0.032, M.bag));
+for (const y of [-0.55, -0.08]) astro.add(ringAround(y, bagR(y) + 0.003, BAG_D, BAG_Z, 0.0035, M.trim));
+astro.add(tube(Array.from({ length: 30 }, (_, i) => { const y = -0.95 + i * (1.38 / 29); return new THREE.Vector3(0.02, y, BAG_Z + bagR(y) * BAG_D + 0.004); }), 0.006, M.trim));
+const TORSO = [[0.27, 0.34], [0.3, 0.46], [0.31, 0.58], [0.305, 0.68], [0.28, 0.75], [0.2, 0.8], [0.1, 0.83], [0.07, 0.845]];
+const TORSO_Z = -0.16, TORSO_D = 0.58;
+const torso = latheMesh(TORSO, M.suit, 64); torso.scale.z = TORSO_D; torso.position.z = TORSO_Z; torso.castShadow = true; astro.add(torso);
+const torsoFront = (x, y, off = 0.006) => { const r = lerpProfile(TORSO, y); return new THREE.Vector3(x, y, TORSO_Z + TORSO_D * Math.sqrt(Math.max(0, r * r - x * x)) + off); };
+for (const x of [-0.1, 0.1]) astro.add(tube(Array.from({ length: 10 }, (_, i) => torsoFront(x, 0.8 - i * 0.04, 0.008)), 0.012, M.strap));
+astro.add(tube(Array.from({ length: 11 }, (_, i) => torsoFront(-0.2 + i * 0.04, 0.66, 0.01)), 0.012, M.strap));
+{ const buckle = new THREE.Mesh(housing(0.07, 0.05, 0.016, 0.01, 0.004), M.buckle); buckle.position.copy(torsoFront(0, 0.66, 0.02)); orient(buckle, FRONT); astro.add(buckle); }
+{ const collar = new THREE.Mesh(new THREE.TorusGeometry(0.08, 0.02, 16, 40), M.suit); collar.rotation.x = Math.PI / 2; collar.scale.y = 0.85; collar.position.set(0, 0.84, TORSO_Z + 0.01); astro.add(collar); }
+const hood = tube([[-0.2, 0.6, -0.25], [-0.22, 0.86, -0.28], [-0.17, 1.08, -0.3], [0, 1.16, -0.31], [0.17, 1.08, -0.3], [0.22, 0.86, -0.28], [0.2, 0.6, -0.25]].map((p) => new THREE.Vector3(...p)), 0.072, M.bag);
+hood.castShadow = true; astro.add(hood);
+for (const x of [-0.2, 0.2]) { const cap = new THREE.Mesh(new THREE.SphereGeometry(0.072, 24, 16), M.bag); cap.position.set(x, 0.6, -0.25); astro.add(cap); }
+{ const cushion = new THREE.Mesh(new THREE.SphereGeometry(1, 40, 28), M.bag); cushion.scale.set(0.2, 0.28, 0.05); cushion.position.set(0, 0.92, -0.34); astro.add(cushion); }
+for (const [side, y] of [[1, 0.62], [1, -0.2], [1, -0.78], [-1, 0.62], [-1, -0.45]]) {
+    const r = y > 0.46 ? 0.31 : bagR(y);
+    const from = new THREE.Vector3(side * r * 0.96, y, BAG_Z + 0.02), to = new THREE.Vector3(side * (PLATE.w / 2 - 0.02), y + 0.015, RZ0 + 0.07);
+    const dir = to.clone().sub(from), len = dir.length();
+    const s = new THREE.Mesh(new THREE.BoxGeometry(len, 0.05, 0.008), M.strap); s.position.copy(from).addScaledVector(dir, 0.5); s.rotation.y = -Math.atan2(dir.z, dir.x); s.castShadow = true; astro.add(s);
+    const b = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.07, 0.022), M.buckle); b.position.copy(from).addScaledVector(dir, 0.55); b.rotation.y = s.rotation.y; astro.add(b);
+    const anchor = new THREE.Mesh(housing(0.05, 0.08, 0.02, 0.01, 0.004), M.buckle); anchor.position.copy(to); orient(anchor, FRONT); astro.add(anchor);
+}
+function limb(a, b, r0, r1, mat) {
+    const m = new THREE.Mesh(new THREE.CylinderGeometry(r1, r0, a.distanceTo(b), 28, 1), mat);
+    m.position.copy(a).add(b).multiplyScalar(0.5); m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), b.clone().sub(a).normalize()); m.castShadow = true; return m;
+}
+const arms = {};
+for (const side of [1, -1]) {
+    const top = side === 1;
+    const S = new THREE.Vector3(side * 0.27, 0.74, -0.16), E = new THREE.Vector3(side * 0.31, top ? 0.5 : 0.49, top ? 0.01 : -0.01);
+    const H = new THREE.Vector3(-side * 0.17, top ? 0.62 : 0.58, top ? 0.13 : 0.08);
+    const grp = new THREE.Group(); astro.add(grp);
+    const sh = new THREE.Mesh(new THREE.SphereGeometry(0.06, 28, 20), M.suit); sh.position.copy(S); sh.castShadow = true; grp.add(sh);
+    grp.add(limb(S, E, 0.055, 0.047, M.suit));
+    const el = new THREE.Mesh(new THREE.SphereGeometry(0.047, 24, 16), M.suit); el.position.copy(E); grp.add(el);
+    const W = E.clone().lerp(H, 0.8);
+    grp.add(limb(E, W, 0.046, 0.038, M.suit));
+    const cuff = new THREE.Mesh(new THREE.TorusGeometry(0.038, 0.008, 12, 28), M.trim); cuff.position.copy(W); cuff.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), H.clone().sub(E).normalize()); grp.add(cuff);
+    const hand = new THREE.Group(); hand.position.copy(W); grp.add(hand);
+    const palm = new THREE.Mesh(new THREE.SphereGeometry(1, 24, 16), M.skin); palm.scale.set(0.03, 0.022, 0.05);
+    palm.position.copy(H.clone().sub(W).multiplyScalar(0.9)); palm.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), H.clone().sub(E).normalize()); palm.castShadow = true; hand.add(palm);
+    if (top) { const p = S.clone().lerp(E, 0.3).add(new THREE.Vector3(side * 0.052, 0, 0.012)); const patch = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.006, 32), M.trim); patch.position.copy(p); orient(patch, new THREE.Vector3(side, 0, 0.25).normalize()); grp.add(patch); }
+    arms[side] = { grp, hand, twitch: 0 };
+}
+// head
+const neck = new THREE.Group(); neck.position.set(0, 0.83, -0.15); astro.add(neck);
+neck.add((() => { const m = new THREE.Mesh(new THREE.CylinderGeometry(0.046, 0.05, 0.14, 28), M.skin); m.position.y = 0.05; return m; })());
+const headGrp = new THREE.Group(); headGrp.position.set(0, 0.155, 0.012); neck.add(headGrp);
+const HR = { x: 0.098, y: 0.122, z: 0.112 };
+const gs = (dx, dy, sx, sy) => Math.exp(-((dx / sx) ** 2) - ((dy / sy) ** 2));
+function faceBump(x, y) {
+    const ax = Math.abs(x);
+    return 0.011 * gs(x, y, 0.008, 0.026) + 0.014 * gs(x, y + 0.03, 0.011, 0.011) + 0.005 * gs(ax - 0.013, y + 0.036, 0.007, 0.006)
+        + 0.007 * gs(0, y - 0.033, 1, 0.011) * gs(x, 0, 0.065, 1) - 0.011 * gs(ax - 0.034, y - 0.008, 0.015, 0.011) + 0.004 * gs(ax - 0.034, y - 0.006, 0.011, 0.007)
+        + 0.005 * gs(ax - 0.052, y + 0.022, 0.018, 0.018) + 0.005 * gs(x, y + 0.052, 0.017, 0.005) + 0.006 * gs(x, y + 0.063, 0.015, 0.006)
+        - 0.0025 * gs(x, y + 0.057, 0.02, 0.0018) + 0.008 * gs(x, y + 0.09, 0.018, 0.014);
+}
+const smooth = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
+const faceZ = (x, y) => HR.z * Math.sqrt(Math.max(0, 1 - (x / HR.x) ** 2 - (y / HR.y) ** 2)) + faceBump(x, y);
+{
+    const g = new THREE.SphereGeometry(1, 120, 90), p = g.attributes.position;
+    for (let i = 0; i < p.count; i++) {
+        const dx = p.getX(i), dy = p.getY(i), dz = p.getZ(i);
+        let x = dx * HR.x, y = dy * HR.y, z = dz * HR.z;
+        if (y < -0.02) { const k = smooth(-0.02, -0.12, y); x *= 1 - 0.22 * k; if (dz < 0) z *= 1 - 0.25 * k; }
+        if (dz > 0) z += faceBump(x, y) * smooth(0, 0.5, dz);
+        p.setXYZ(i, x, y, z);
+    }
+    g.computeVertexNormals();
+    const head = new THREE.Mesh(g, M.skin); head.castShadow = true; headGrp.add(head);
+}
+for (const s of [-1, 1]) { const ear = new THREE.Mesh(new THREE.SphereGeometry(1, 20, 14), M.skin); ear.scale.set(0.012, 0.028, 0.019); ear.position.set(s * 0.095, 0, -0.008); ear.rotation.y = s * 0.3; headGrp.add(ear); }
+const eyeClosed = [], eyeOpen = [];
+for (const s of [-1, 1]) {
+    const pts = Array.from({ length: 7 }, (_, i) => { const x = s * (0.021 + i * 0.0048), y = 0.003 + 9 * (Math.abs(x) - 0.0355) ** 2; return new THREE.Vector3(x, y, faceZ(x, y) + 0.0012); });
+    const lid = tube(pts, 0.0014, M.trim); headGrp.add(lid); eyeClosed.push(lid);
+    const ball = new THREE.Mesh(new THREE.SphereGeometry(0.0105, 20, 14), M.panel); ball.position.set(s * 0.034, 0.008, faceZ(s * 0.034, 0.008) - 0.006); ball.visible = false; headGrp.add(ball); eyeOpen.push(ball);
+}
+{
+    const g = new THREE.SphereGeometry(1, 90, 68), p = g.attributes.position, dirs = [];
+    for (let i = 0; i < p.count; i++) {
+        const dx = p.getX(i), dy = p.getY(i), dz = p.getZ(i); dirs.push([dx, dy, dz]);
+        const r = 1.055 + 0.03 * Math.max(0, dy) + 0.018 * Math.sin(dx * 23 + dy * 9) * Math.sin(dz * 17 - dy * 11);
+        p.setXYZ(i, dx * HR.x * r, dy * HR.y * r, dz * HR.z * r);
+    }
+    const idx = g.index.array, keep = [];
+    for (let t = 0; t < idx.length; t += 3) {
+        const c = [0, 1, 2].map((k) => (dirs[idx[t]][k] + dirs[idx[t + 1]][k] + dirs[idx[t + 2]][k]) / 3);
+        if (c[1] > 0.1 + 0.36 * Math.max(0, c[2]) - 0.55 * Math.max(0, -c[2])) keep.push(idx[t], idx[t + 1], idx[t + 2]);
+    }
+    g.setIndex(keep); g.computeVertexNormals();
+    const hair = new THREE.Mesh(g, M.hair); hair.castShadow = true; headGrp.add(hair);
+}
+// headband
+const bandYc = (th) => 0.024 + 0.021 * Math.cos(th);
+function bandPoint(th, dy = 0, off = 0.006) {
+    const y = bandYc(th) + dy, e = Math.sqrt(Math.max(0.05, 1 - (y / HR.y) ** 2));
+    const hairK = 1 + 0.07 * (1 - smooth(0.5, 0.85, Math.cos(th)));
+    return new THREE.Vector3(Math.sin(th) * (HR.x * e * hairK + off), y, Math.cos(th) * (HR.z * e * hairK + off));
+}
+const bandNormal = (th) => new THREE.Vector3(Math.sin(th) / HR.x, 0, Math.cos(th) / HR.z).normalize();
+{
+    const N = 140, pos = [], idx = [];
+    for (let i = 0; i <= N; i++) {
+        const th = (i / N) * Math.PI * 2, a = bandPoint(th, 0.012), b = bandPoint(th, -0.012);
+        pos.push(a.x, a.y, a.z, b.x, b.y, b.z);
+        if (i < N) { const k = i * 2; idx.push(k, k + 1, k + 2, k + 1, k + 3, k + 2); }
+    }
+    const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); geo.setIndex(idx); geo.computeVertexNormals();
+    headGrp.add(new THREE.Mesh(geo, M.band));
+    for (const dy of [0.012, -0.012]) headGrp.add(tube(Array.from({ length: 73 }, (_, i) => bandPoint((i / 72) * Math.PI * 2, dy, 0.007)), 0.0018, M.pod, true));
+}
+// sensors: dark pods + glowing dots that follow each live signal
+const pickables = [], podsBy = {}, glowsBy = {};
+const SENSOR_COLOR = Object.fromEntries(SENSORS.map((s) => [s.id, s.color]));
+function register(id, mesh) { mesh.userData.sensor = id; pickables.push(mesh); (podsBy[id] ??= []).push(mesh); headGrp.add(mesh); }
+function glow(id, mesh) { mesh.material = glowMat(SENSOR_COLOR[id]); mesh.userData.base = mesh.material.color.clone(); mesh.userData.sensor = id; (glowsBy[id] ??= []).push(mesh); pickables.push(mesh); headGrp.add(mesh); }
+function podOnBand(id, th, geo, dy = 0, off = 0.01) { const nrm = bandNormal(th), m = new THREE.Mesh(geo, M.pod.clone()); m.position.copy(bandPoint(th, dy, off)); orient(m, nrm); register(id, m); return { m, n: nrm }; }
+function dotAt(id, pos, nrm, r) { const d = new THREE.Mesh(new THREE.CircleGeometry(r, 24)); d.position.copy(pos).addScaledVector(nrm, 0.0005); d.lookAt(d.position.clone().add(nrm)); glow(id, d); return d; }
+for (const th of [0.6, 0, -0.6, Math.PI - 0.4, -(Math.PI - 0.4)]) { const { n: nrm } = podOnBand('eeg', th, new THREE.CylinderGeometry(0.0085, 0.0085, 0.006, 24)); dotAt('eeg', bandPoint(th, 0, 0.0132), nrm, 0.0055); }
+for (const [s, y] of [[1, -0.003], [-1, 0.017]]) {
+    const end = new THREE.Vector3(s * 0.052, y, faceZ(s * 0.052, y) + 0.003);
+    const start = bandPoint(s * 0.85, -0.012, 0.006), mid = start.clone().lerp(end, 0.5).add(new THREE.Vector3(s * 0.006, 0, 0.008));
+    register('eog', tube([start, mid, end], 0.0022, M.pod.clone()));
+    const nrm = new THREE.Vector3(s * 0.55, 0, 1).normalize();
+    const pad = new THREE.Mesh(new THREE.CylinderGeometry(0.0075, 0.0075, 0.003, 20), M.pod.clone()); pad.position.copy(end); orient(pad, nrm); register('eog', pad);
+    dotAt('eog', end.clone().addScaledVector(nrm, 0.002), nrm, 0.005);
+}
+{ const { m, n: nrm } = podOnBand('ppg', -1.25, housing(0.028, 0.022, 0.011, 0.007, 0.002)); dotAt('ppg', m.position.clone().addScaledVector(nrm, 0.006), nrm, 0.0058); }
+{ const { m, n: nrm } = podOnBand('temp', 1.25, new THREE.CylinderGeometry(0.01, 0.01, 0.008, 24)); dotAt('temp', m.position.clone().addScaledVector(nrm, 0.0045), nrm, 0.0062); }
+{ const { m, n: nrm } = podOnBand('imu', Math.PI, housing(0.07, 0.04, 0.018, 0.012, 0.003), 0, 0.014); const bar = new THREE.Mesh(new THREE.PlaneGeometry(0.04, 0.006)); bar.position.copy(m.position).addScaledVector(nrm, 0.0096); bar.lookAt(bar.position.clone().add(nrm)); glow('imu', bar); }
+const pulseRings = [];
+for (const th of [1.62, -1.62]) {
+    const { m, n: nrm } = podOnBand('audio', th, housing(0.03, 0.026, 0.012, 0.008, 0.002), -0.004, 0.012);
+    dotAt('audio', m.position.clone().addScaledVector(nrm, 0.0065), nrm, 0.0055);
+    const ringM = new THREE.Mesh(new THREE.RingGeometry(0.018, 0.022, 32), new THREE.MeshBasicMaterial({ color: 0xf2b62f, transparent: true, opacity: 0, side: THREE.DoubleSide, depthWrite: false, toneMapped: false }));
+    ringM.position.copy(m.position).addScaledVector(nrm, 0.008); ringM.lookAt(ringM.position.clone().add(nrm)); headGrp.add(ringM); pulseRings.push(ringM);
+}
+// airflow from the outlet across the face
+const AIR_N = 34;
+const airGeo = new THREE.BufferGeometry(); airGeo.setAttribute('position', new THREE.Float32BufferAttribute(new Float32Array(AIR_N * 6), 3));
+const air = new THREE.LineSegments(airGeo, new THREE.LineBasicMaterial({ color: 0xbcd6ff, transparent: true, opacity: 0.3, depthWrite: false }));
+scene.add(air);
+const airCurve = new THREE.QuadraticBezierCurve3(new THREE.Vector3(-0.84, 1.1, RZ0 + 0.06), new THREE.Vector3(-0.25, 1.06, 0.05), new THREE.Vector3(0.65, 0.85, 0.95));
+const airT = Array.from({ length: AIR_N }, () => rand()), airOff = Array.from({ length: AIR_N }, () => [(rand() - 0.5) * 0.12, (rand() - 0.5) * 0.12]);
+function updateAir(dt) {
+    const p = airGeo.attributes.position.array, a = new THREE.Vector3(), b = new THREE.Vector3();
+    for (let i = 0; i < AIR_N; i++) {
+        airT[i] = (airT[i] + dt * 0.22) % 1;
+        airCurve.getPoint(airT[i], a); airCurve.getPoint(Math.min(1, airT[i] + 0.035), b);
+        const [ox, oy] = airOff[i], s = airT[i];
+        p.set([a.x, a.y + oy * s, a.z + ox * s, b.x, b.y + oy * s, b.z + ox * s], i * 6);
+    }
+    airGeo.attributes.position.needsUpdate = true;
+}
+
+// ================================================================ pose & motion (real speed)
+const pose = { pitch: 0.02, yaw: 0, roll: 0, look: 0, nextLook: 2 };
+let lastPose = { pitch: 0, yaw: 0, roll: 0 }, twitchNext = 1;
+function updateBody(dt, t) {
+    const m = modeNow, arousal = t < G.arousalUntil;
+    const awake = ['active', 'winddown', 'morning'].includes(m);
+    let yawT = 0, pitchT = VITALS[m][3], rollT = awake ? 0 : 0.2;
+    const drift = awake ? 0.3 : 1;
+    if (m === 'active' || m === 'morning') { if (t >= pose.nextLook) { pose.look = rand() < 0.35 ? -0.55 : (rand() - 0.5) * 0.5; pose.nextLook = t + 1.5 + rand() * 4; } yawT = pose.look; }
+    else if (m === 'winddown') yawT = -0.08;
+    pitchT += drift * (0.025 * Math.sin(t * 0.21) + 0.015 * Math.sin(t * 0.083));
+    yawT += drift * 0.035 * Math.sin(t * 0.13 + 1);
+    rollT += drift * 0.03 * Math.sin(t * 0.11 + 2);
+    if (arousal) { const k = Math.sin((G.arousalUntil - t) * 3); yawT += 0.25 * k; pitchT -= 0.1; rollT = 0.05 * k; }
+    const f = 1 - Math.exp(-dt / (awake || arousal ? 0.35 : 1.4));
+    pose.pitch += (pitchT - pose.pitch) * f; pose.yaw += (yawT - pose.yaw) * f; pose.roll += (rollT - pose.roll) * f;
+    neck.rotation.set(pose.pitch, pose.yaw, pose.roll, 'YXZ');
+    const open = awake || arousal;
+    eyeClosed.forEach((e) => { e.visible = !open; }); eyeOpen.forEach((e) => { e.visible = open; });
+    if (dt > 0) { const angVel = Math.hypot(pose.pitch - lastPose.pitch, pose.yaw - lastPose.yaw, pose.roll - lastPose.roll) / dt * 180 / Math.PI; imu.move += (angVel + 0.25 * rand() - imu.move) * Math.min(1, dt * 4); }
+    lastPose = { pitch: pose.pitch, yaw: pose.yaw, roll: pose.roll };
+    imu.pitch = pose.pitch * 180 / Math.PI; imu.yaw = pose.yaw * 180 / Math.PI; imu.roll = pose.roll * 180 / Math.PI;
+    const b = Math.sin(G.ph.resp);
+    bag.scale.set(1 + 0.006 * b, 1, BAG_D * (1 + 0.016 * b));
+    torso.scale.set(1 + 0.008 * b, 1, TORSO_D * (1 + 0.025 * b));
+    if (m === 'REM' && t >= twitchNext) { arms[rand() < 0.5 ? -1 : 1].twitch = (rand() - 0.5) * 0.25; twitchNext = t + 0.6 + rand() * 2.5; }
+    for (const side of [-1, 1]) { const A = arms[side]; A.twitch *= Math.exp(-dt * 6); A.grp.position.set(0, (arousal ? 0.015 : 0) + 0.002 * b, 0.006 * b); A.hand.rotation.set(A.twitch, 0, A.twitch * 0.5); }
+}
+
+// ================================================================ lighting
+let lightNow = lightAt(0, true), shade = 0;
+const tmpC = new THREE.Color();
+function applyLight(dt = 0) {
+    lightNow = lightAt(simMin, lightDynamic);
+    const [r, g, b] = kelvinRGB(lightNow.cct);
+    tmpC.setRGB(r / 255, g / 255, b / 255, THREE.SRGBColorSpace);
+    const vis = Math.sqrt(lightNow.b);
+    spot.color.copy(tmpC); spot.intensity = 2.2 * vis;
+    cabinFill.color.copy(tmpC); cabinFill.intensity = 0.4 * vis;
+    stripLight.color.copy(tmpC); stripLight.intensity = 0.35 * vis;
+    cabinHemi.color.copy(tmpC); cabinHemi.intensity = 0.65 * vis;
+    lightFace.color.copy(tmpC).multiplyScalar(0.05 + 0.95 * vis);
+    stripMat.color.copy(tmpC).multiplyScalar(0.04 + 0.96 * vis);
+    const shadeT = simMin >= BED - 60 && simMin < WAKE_RAMP[0] + 8 ? 1 : 0;
+    shade = dt > 0 ? shade + (shadeT - shade) * Math.min(1, dt * 1.5) : shadeT;
+    shadeMat.opacity = shade; windowLight.intensity = 0.22 * (1 - shade);
+    air.material.opacity = 0.16 + 0.2 * vis;
+}
+
+// ================================================================ picking, camera
+let turn = null;
+function flyTo(view, ms = 800) { turn = { fromPos: camera.position.clone(), fromTarget: controls.target.clone(), toPos: view.pos.clone(), toTarget: view.target.clone(), start: performance.now(), ms: reduceMotion ? 1 : ms }; }
+const raycaster = new THREE.Raycaster(), pointer = new THREE.Vector2();
+let downAt = null;
+canvas.addEventListener('pointerdown', (e) => { downAt = [e.clientX, e.clientY]; });
+canvas.addEventListener('pointerup', (e) => {
+    if (!downAt || Math.hypot(e.clientX - downAt[0], e.clientY - downAt[1]) > 5) return;
+    const r = canvas.getBoundingClientRect();
+    pointer.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
+    raycaster.setFromCamera(pointer, camera);
+    const hit = raycaster.intersectObjects(pickables, false)[0];
+    if (hit) selectSensor(hit.object.userData.sensor);
+});
+
+// ================================================================ sound (optional, off by default)
+let audioCtx = null, noiseBuf = null, pulseFlash = -1e9;
+function ensureAudio() {
+    if (audioCtx) return;
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const len = Math.round(audioCtx.sampleRate * 0.05);
+    noiseBuf = audioCtx.createBuffer(1, len, audioCtx.sampleRate);
+    const d = noiseBuf.getChannelData(0);
+    let b0 = 0, b1 = 0, b2 = 0;
+    for (let i = 0; i < len; i++) {
+        const white = Math.random() * 2 - 1;
+        b0 = 0.99765 * b0 + white * 0.099046; b1 = 0.963 * b1 + white * 0.2965164; b2 = 0.57 * b2 + white * 1.0526913;
+        const ramp = Math.min(1, i / (0.005 * audioCtx.sampleRate), (len - i) / (0.005 * audioCtx.sampleRate));
+        d[i] = (b0 + b1 + b2 + white * 0.1848) * 0.11 * ramp;
+    }
+}
+function onPulse() {
+    pulseFlash = performance.now();
+    if (hearPulses && audioCtx) { const src = audioCtx.createBufferSource(), gain = audioCtx.createGain(); gain.gain.value = 0.06 * assist.vol; src.buffer = noiseBuf; src.connect(gain).connect(audioCtx.destination); src.start(); }
+}
+
+// ================================================================ drawing helpers
+const $ = (s) => document.querySelector(s);
+function sizeCanvas(c) {
+    const dpr = Math.min(window.devicePixelRatio || 1, 2), r = c.getBoundingClientRect();
+    const wpx = Math.max(10, Math.round(r.width * dpr)), hpx = Math.max(10, Math.round(r.height * dpr));
+    if (c.width !== wpx || c.height !== hpx) { c.width = wpx; c.height = hpx; }
+    const g = c.getContext('2d'); g.setTransform(dpr, 0, 0, dpr, 0, 0);
+    return { g, W: r.width, H: r.height };
+}
+// soft gradient line of the latest samples (indicator and sensor card)
+function miniWave(c, buf, seconds, range, colors, withPulses = false) {
+    const { g, W, H } = sizeCanvas(c);
+    g.clearRect(0, 0, W, H);
+    const count = Math.round(FS * seconds), start = n - count, mid = H / 2, scale = (H / 2 - 4) / range;
+    const grad = g.createLinearGradient(0, 0, W, 0); grad.addColorStop(0, colors[0]); grad.addColorStop(1, colors[1]);
+    g.beginPath();
+    for (let k = 0; k < count; k += 2) { const v = buf[((start + k) % BUF + BUF) % BUF], x = k / count * W, y = mid - Math.max(-range, Math.min(range, v)) * scale; k ? g.lineTo(x, y) : g.moveTo(x, y); }
+    g.strokeStyle = grad; g.lineWidth = 2; g.lineJoin = 'round'; g.stroke();
+    g.lineTo(W, H); g.lineTo(0, H); g.closePath(); g.globalAlpha = 0.08; g.fillStyle = grad; g.fill(); g.globalAlpha = 1;
+    if (withPulses) for (const mk of markers) {
+        if (mk.type !== 'pulse' || mk.i < start || mk.i >= n) continue;
+        const x = (mk.i - start) / count * W, y = mid - Math.max(-range, Math.min(range, buf[mk.i % BUF])) * scale;
+        g.strokeStyle = 'rgba(226,85,122,0.35)'; g.lineWidth = 1; g.beginPath(); g.moveTo(x, y); g.lineTo(x, H); g.stroke();
+        g.fillStyle = '#e2557a'; g.beginPath(); g.arc(x, y, 3.2, 0, Math.PI * 2); g.fill();
+    }
+}
+function miniSeries(c, values, color, min, max) {
+    const { g, W, H } = sizeCanvas(c); g.clearRect(0, 0, W, H);
+    const vals = values.filter((v) => v != null); if (vals.length < 2) return;
+    const lo = min ?? Math.min(...vals), hi = max ?? Math.max(...vals), span = hi - lo || 1;
+    g.strokeStyle = color; g.lineWidth = 2; g.beginPath();
+    values.forEach((v, i) => { if (v == null) return; const x = i / (values.length - 1) * W, y = H - 4 - (v - lo) / span * (H - 8); g.lineTo(x, y); });
+    g.stroke();
+}
+const SHOW = FS * 6;
+function drawTrace(c, buf, range, opts = {}) {
+    const { g, W, H } = sizeCanvas(c);
+    g.clearRect(0, 0, W, H);
+    const mid = H / 2, scale = (H / 2 - 6) / range;
+    g.strokeStyle = '#eceef6'; g.lineWidth = 1;
+    for (let s = 0; s <= 6; s++) { const x = s / 6 * W; g.beginPath(); g.moveTo(x, 0); g.lineTo(x, H); g.stroke(); }
+    g.beginPath(); g.moveTo(0, mid); g.lineTo(W, mid); g.stroke();
+    if (opts.threshold != null) { g.setLineDash([5, 4]); g.strokeStyle = 'rgba(47, 95, 216, 0.55)'; const y = mid - opts.threshold * scale; g.beginPath(); g.moveTo(0, y); g.lineTo(W, y); g.stroke(); g.setLineDash([]); }
+    const start = n - SHOW;
+    if (opts.markers) for (const mk of markers) {
+        if (mk.i < start || mk.i >= n) continue;
+        const x = (mk.i - start) / SHOW * W;
+        if (mk.type === 'pulse') { g.fillStyle = 'rgba(226, 85, 122, 0.18)'; g.fillRect(x - 3, 0, 6, H); g.fillStyle = '#e2557a'; g.fillRect(x - 1, 0, 2, H); }
+        else { g.fillStyle = '#2f5fd8'; g.beginPath(); g.arc(x, mid - buf[mk.i % BUF] * scale, 3.5, 0, Math.PI * 2); g.fill(); }
+    }
+    g.strokeStyle = opts.color || '#3b3f8f'; g.lineWidth = 1.3; g.beginPath();
+    for (let k = 0; k < SHOW; k++) { const idx = start + k; if (idx < 0) continue; const x = k / SHOW * W, y = mid - Math.max(-range * 1.1, Math.min(range * 1.1, buf[idx % BUF])) * scale; k ? g.lineTo(x, y) : g.moveTo(x, y); }
+    g.stroke();
+    g.fillStyle = '#6b7393'; g.font = '11px Lexend, sans-serif';
+    const bar = opts.bar || 100, bh = bar * scale;
+    g.fillRect(W - 10, mid - bh / 2, 2, bh); g.textAlign = 'right'; g.fillText(`${bar} µV`, W - 14, mid + 4); g.textAlign = 'left'; g.fillText('1 s', 4, H - 5);
+}
+
+// ================================================================ history, vitals
+const night = { hr: new Array(END).fill(null), hrv: new Array(END).fill(null), temp: new Array(END).fill(null), stim: new Uint8Array(END) };
+const live = { move: [], eog: [], pitch: [] };
+const vit = { hr: 72, rmssd: 32, temp: 34.1, eogAct: 0 };
+function computeVitals() {
+    const rr = heart.rr;
+    if (rr.length >= 6) { vit.hr = 60000 / (rr.slice(-5).reduce((a, b) => a + b, 0) / 5); let s = 0, c = 0; for (let i = Math.max(1, rr.length - 30); i < rr.length; i++) { s += (rr[i] - rr[i - 1]) ** 2; c++; } vit.rmssd = Math.sqrt(s / c); }
+    vit.temp = 34.1 + 0.08 * Math.sin(simMin / 140) + 0.02 * Math.sin(tReal * 0.3);
+    let s = 0; for (let k = 1; k < FS; k++) { const a = eogBuf[(n - k) % BUF], b = eogBuf[(n - k - 1) % BUF]; s += (a - b) ** 2; }
+    vit.eogAct = Math.sqrt(s / FS);
+}
+function stageTotals(upTo = simMin) {
+    let asleep = 0, n3 = 0, rem = 0;
+    for (const s of SEGMENTS) { if (s.from >= upTo) break; const d = Math.min(upTo, s.to) - s.from; if (s.stage !== 'W') asleep += d; if (s.stage === 'N3') n3 += d; if (s.stage === 'REM') rem += d; }
+    return { asleep, n3, rem };
+}
+const learnedVol = () => Math.max(1, assist.bad != null ? Math.min(Math.max(assist.best, 1), assist.bad - 1) : Math.max(assist.best, assist.vol));
+
+// ================================================================ main view
+const STEP_ICON = {
+    done: '<svg viewBox="0 0 16 16"><path d="M3.5 8.5l3 3 6-7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    moon: '<svg viewBox="0 0 16 16"><path d="M10.5 2.2A6 6 0 1 0 13.8 10 5 5 0 0 1 10.5 2.2z" fill="currentColor"/></svg>',
+};
+let chapterSeen = new Set();
+function currentChapter() {
+    if (simMin >= BED && tReal < G.arousalUntil + 4) return 'waking';
+    if (simMin >= WAKE_RAMP[0]) return 'morning';
+    if (simMin >= FIRST_N3) return 'deep';
+    if (simMin >= BED - 30) return 'falling';
+    return 'before';
+}
+function renderStepper() {
+    const now = currentChapter(); chapterSeen.add(now);
+    const order = CHAPTERS.map((c) => c.id), idx = order.indexOf(now);
+    $('[data-stepper]').querySelectorAll('.step').forEach((el, i) => {
+        const id = order[i], done = i < idx || (chapterSeen.has(id) && i !== idx && id === 'waking');
+        el.classList.toggle('now', i === idx); el.classList.toggle('done', !el.classList.contains('now') && done);
+        el.querySelector('i').innerHTML = i === idx ? STEP_ICON.moon : done ? STEP_ICON.done : STEP_ICON.moon;
+    });
+    $('[data-step-fill]').style.width = `${idx * 20}%`;
+}
+function captionNow() {
+    const C = UI[lang].cap;
+    if (finished || simMin >= SLEEP_END + 20) return [C.done[0], fill(C.done[1], { n3: fmtDur(stageTotals(SLEEP_END).n3), lat: fmtDur(FIRST_N3 - BED), v: learnedVol() })];
+    if (simMin >= BED && tReal < G.arousalUntil) return [C.arousal[0], fill(C.arousal[1], { v: assist.vol })];
+    if (assist.bad != null && tReal >= assist.learnedAt && tReal < assist.learnedAt + 6) return [C.learned[0], fill(C.learned[1], { b: assist.bad, c: assist.cap })];
+    if (simMin >= WAKE_RAMP[0] || modeNow === 'morning') return C.morning;
+    if (assist.guide) return C.guide;
+    if (modeNow === 'active') return lightNow.phase === 'day' || !lightDynamic ? C.day : C.pre;
+    if (modeNow === 'winddown') return C.pre;
+    if (modeNow === 'relaxed') return simMin < FIRST_N3 ? C.relaxed : C.W;
+    if (modeNow === 'N3') return stimEligibility() === 'ok' && det.count > 0 ? [C.N3[0], fill(C.N3[1], { v: assist.vol })] : C.N3wait;
+    return C[modeNow] ?? C.N2;
+}
+function selectSensor(id) { selected = id; cardOpen = true; renderCard(); }
+function renderCard() {
+    const s = SENSORS.find((x) => x.id === selected);
+    $('[data-card]').hidden = !cardOpen;
+    $('[data-card-dot]').style.background = s.color;
+    $('[data-card-title]').textContent = s.title[lang];
+    $('[data-card-role]').textContent = tr(`role_${s.role}`);
+    $('[data-card-lines]').innerHTML = ['measures', 'where', 'why'].map((k) => `<div>${esc(tr(k))}: ${esc(s.short[k][lang])}</div>`).join('');
+    $('[data-card-pick]').innerHTML = SENSORS.map((x) => `<button type="button" data-pick="${x.id}" style="background:${x.color}" aria-label="${esc(x.title[lang])}" title="${esc(x.title[lang])}" aria-pressed="${x.id === selected}"></button>`).join('');
+}
+$('[data-card-pick]').addEventListener('click', (e) => { const b = e.target.closest('[data-pick]'); if (b) selectSensor(b.dataset.pick); });
+$('[data-card-close]').addEventListener('click', () => { cardOpen = false; renderCard(); });
+
+function drawCardWave() {
+    if (!cardOpen) return;
+    const c = $('[data-card-wave]'), col = SENSOR_COLOR[selected];
+    if (selected === 'eeg') miniWave(c, eegBuf, 4, 130, ['#8b6ff0', '#e2557a']);
+    else if (selected === 'eog') miniWave(c, eogBuf, 4, 200, ['#3aa0ff', '#8b6ff0']);
+    else if (selected === 'ppg') miniWave(c, ppgBuf, 4, 1.3, [col, '#e2557a']);
+    else if (selected === 'audio') miniWave(c, eegBuf, 4, 130, ['#f2b62f', '#e2557a'], true);
+    else if (selected === 'imu') miniSeries(c, live.move, col, 0, 30);
+    else miniSeries(c, night.temp, col, 33.6, 34.6);
+}
+// leader line from the selected sensor's dot to the card
+const leaderLine = $('[data-leader] line'), leaderDot = $('[data-leader] circle'), tmpV = new THREE.Vector3();
+function placeLeader() {
+    const card = $('[data-card]');
+    if (!cardOpen || detailsOpen) { leaderLine.setAttribute('opacity', 0); leaderDot.setAttribute('opacity', 0); return; }
+    const dot = glowsBy[selected][0]; dot.getWorldPosition(tmpV); tmpV.project(camera);
+    const sr = stage.getBoundingClientRect(), cr = card.getBoundingClientRect();
+    const x1 = (tmpV.x * 0.5 + 0.5) * sr.width, y1 = (-tmpV.y * 0.5 + 0.5) * sr.height;
+    const cl = cr.left - sr.left, crt = cr.right - sr.left, x2 = Math.abs(cl - x1) < Math.abs(crt - x1) ? cl : crt, y2 = Math.min(Math.max(y1, cr.top - sr.top + 30), cr.bottom - sr.top - 30);
+    const visible = tmpV.z < 1 && window.innerWidth > 760;
+    for (const [k, v] of [['x1', x1], ['y1', y1], ['x2', x2], ['y2', y2]]) leaderLine.setAttribute(k, v);
+    leaderDot.setAttribute('cx', x1); leaderDot.setAttribute('cy', y1);
+    leaderLine.setAttribute('opacity', visible ? 1 : 0); leaderDot.setAttribute('opacity', visible ? 1 : 0);
+}
+
+function updateMain() {
+    $('[data-clock]').textContent = fmtClock(simMin);
+    const seg = segAt(simMin), info = STAGE_INFO[seg.stage];
+    $('[data-ov-stage]').innerHTML = `<span class="dot"></span><b>${esc(fmtClock(simMin))}</b><span class="muted">·</span><span class="muted">${esc(info.name[lang])}</span>`;
+    const L = lightNow, [r, g, b] = kelvinRGB(L.cct), sw = L.b > 0.001 ? `rgba(${r | 0},${g | 0},${b | 0},${0.35 + 0.65 * Math.sqrt(L.b)})` : '#141a3a';
+    const pct = `${L.b >= 0.1 ? Math.round(L.b * 100) : (L.b * 100).toFixed(L.b > 0 ? 1 : 0)}%`;
+    const lname = UI[lang].light_short[L.phase];
+    $('[data-ov-light]').innerHTML = L.b < 0.001 ? `<span class="sw"></span>${esc(tr('night_off'))}` : `<span class="sw" style="background:${sw}"></span>${esc(lname)} · ${Math.round(L.cct / 100) * 100} K`;
+    $('[data-ind-stage]').textContent = seg.stage;
+    $('[data-ind-stage]').style.background = info.color;
+    $('[data-ind-sw]').style.background = sw;
+    $('[data-ind-light]').textContent = `${lname} · ${pct}`;
+    const [title, line] = captionNow();
+    $('[data-caption] strong').textContent = title; $('[data-caption] span').textContent = line;
+    renderStepper();
+    updateButtons();
+}
+
+// ================================================================ science details view
+const TILES = [{ id: 'hr', key: 't_hr', sub: 'hr_sub' }, { id: 'hrv', key: 't_hrv', sub: 'hrv_sub' }, { id: 'temp', key: 't_temp', sub: 'temp_sub' }, { id: 'move', key: 't_move', sub: 'move_sub' }, { id: 'orient', key: 't_orient', sub: 'orient_sub' }, { id: 'eogact', key: 't_eog', sub: '' }];
+function eogLabel() {
+    if (modeNow === 'REM') return tr('eog_rem');
+    if (modeNow === 'N1') return tr('eog_slow');
+    if (['active', 'morning', 'winddown'].includes(modeNow) || tReal < G.arousalUntil) return tr('eog_blink');
+    return tr('eog_quiet');
+}
+function currentRule() {
+    if (tReal < G.arousalUntil && simMin >= BED) return 'arousal';
+    if (modeNow === 'morning' || (simMin >= WAKE_RAMP[0] && modeNow !== 'N3')) return 'morning';
+    if (assist.guide) return 'guide';
+    if (modeNow === 'active' || modeNow === 'winddown') return 'pre';
+    if (modeNow === 'relaxed' || modeNow === 'N1') return 'onset';
+    if (modeNow === 'N2') return 'n2';
+    if (modeNow === 'N3') return 'n3';
+    return 'rem';
+}
+function updateDetails() {
+    $('[data-st-detects]').textContent = DETECTS[modeNow][lang];
+    const tot = stageTotals();
+    $('[data-st-asleep]').textContent = fmtDur(tot.asleep); $('[data-st-n3]').textContent = fmtDur(tot.n3); $('[data-st-rem]').textContent = fmtDur(tot.rem);
+    const showReport = simMin >= SLEEP_END;
+    $('[data-report]').hidden = !showReport;
+    if (showReport) {
+        const firstSleep = SEGMENTS.find((s) => s.from >= BED && s.stage !== 'W'), all = stageTotals(SLEEP_END);
+        const wakes = SEGMENTS.filter((s) => s.stage === 'W' && s.from > firstSleep.from && s.from < SLEEP_END).length + assist.natWakes + assist.stimWakes;
+        $('[data-report-kv]').innerHTML = [['r_onset', fmtDur(firstSleep.from - BED)], ['r_n3lat', fmtDur(FIRST_N3 - BED)], ['r_n3', fmtDur(all.n3)], ['r_total', fmtDur(all.asleep)], ['r_wakes', String(wakes)], ['r_pulses', String(det.count)]]
+            .map(([k, v]) => `<div><dt>${esc(tr(k))}</dt><dd>${esc(v)}</dd></div>`).join('');
+        $('[data-report-learned]').textContent = tr('r_learned', { v: learnedVol(), bad: assist.bad != null ? tr('r_bad', { b: assist.bad }) : '' });
+    }
+    const rule = currentRule();
+    document.querySelectorAll('[data-rules] li').forEach((li) => li.classList.toggle('on', li.dataset.rule === rule));
+    const reason = stimEligibility();
+    let state = 'wait', text = tr('st_wait');
+    if (!stimEnabled) { state = 'off'; text = tr('st_off'); }
+    else if (assist.guide) { state = 'guide'; text = tr('st_guide'); }
+    else if (reason === 'ok') { state = 'active'; text = tr('st_active'); }
+    else if (reason === 'arousal') { state = 'stopped'; text = tr('st_arousal'); }
+    else if (rule === 'onset') text = tr('st_quiet');
+    else if (reason === 'stage') text = tr('st_stage');
+    else if (reason === 'lowdelta') text = tr('st_lowdelta');
+    $('[data-status]').dataset.s = state; $('[data-status] span').textContent = text;
+    $('[data-vol-label]').textContent = tr('vol', { v: assist.vol });
+    $('[data-vol-bar]').style.width = `${assist.vol * 10}%`; $('[data-vol-bar]').style.background = assist.vol >= VOL_WAKES ? 'var(--amber)' : 'var(--pink)';
+    document.querySelectorAll('[data-steps] li').forEach((li, i) => li.classList.toggle('on', state === 'active' && det.step === i + 1));
+    $('[data-stim-count]').textContent = tr('pulses', { n: det.count }) + (det.response != null ? ` · ${tr('response', { p: `${det.response >= 0 ? '+' : ''}${Math.round(det.response * 100)}%` })}` : '');
+    const L = lightNow;
+    $('[data-l-cct]').textContent = L.b > 0.001 ? `≈${Math.round(L.cct / 100) * 100} K` : '—';
+    $('[data-l-bright]').textContent = `${L.b >= 0.1 ? Math.round(L.b * 100) : (L.b * 100).toFixed(L.b > 0 ? 1 : 0)}%`;
+    const nextT = LIGHT_CHANGES[lightDynamic].find((x) => x > simMin); $('[data-l-next]').textContent = nextT != null ? fmtClock(nextT) : '—';
+    $('[data-l-note]').textContent = lightDynamic ? tr('note_dyn') : tr('note_static');
+    for (const k of ['delta', 'theta', 'alpha', 'beta']) { const el = document.querySelector(`[data-band="${k}"]`); if (el) { el.style.width = `${Math.round(bands[k] * 100)}%`; document.querySelector(`[data-band-v="${k}"]`).textContent = `${Math.round(bands[k] * 100)}%`; } }
+    const set = (id, html) => { const el = document.querySelector(`[data-tv="${id}"]`); if (el) el.innerHTML = html; };
+    set('hr', `${Math.round(vit.hr)} <small>${tr('bpm')}</small>`); set('hrv', `${Math.round(vit.rmssd)} <small>${tr('ms')}</small>`); set('temp', `${vit.temp.toFixed(1)} <small>°C</small>`);
+    set('move', `${imu.move.toFixed(1)} <small>${tr('degs')}</small>`); set('orient', `<span style="font-size:0.95rem;direction:ltr;unicode-bidi:isolate">↕ ${Math.round(imu.pitch)}° · ↔ ${Math.round(imu.yaw)}°</span>`); set('eogact', `${Math.round(vit.eogAct)} <small>µV</small>`);
+    const es = document.querySelector('[data-ts="eogact"]'); if (es) es.textContent = eogLabel();
+    const c = (id) => document.querySelector(`[data-tc="${id}"]`);
+    if (c('hr')) {
+        miniWave(c('hr'), ppgBuf, 4, 1.3, ['#e2557a', '#e2557a']); miniSeries(c('hrv'), night.hrv, '#6f5fd6', 20, 75); miniSeries(c('temp'), night.temp, '#ef8a2e', 33.6, 34.6);
+        miniSeries(c('move'), live.move, '#1f9e6a', 0, 40); miniSeries(c('orient'), live.pitch, '#1f9e6a'); miniSeries(c('eogact'), live.eog, '#2f8fd8', 0, 60);
+    }
+    drawHypnogram();
+}
+const LEVEL = { W: 0, REM: 1, N1: 2, N2: 3, N3: 4 };
+function drawHypnogram() {
+    const c = $('[data-hypno]'); const { g, W, H } = sizeCanvas(c);
+    g.clearRect(0, 0, W, H);
+    const left = 46, right = 8, top = 6, lightH = 16, hyTop = top + lightH + 10, hyH = H - hyTop - 34, rowH = hyH / 4;
+    const x = (m) => left + (m / END) * (W - left - right);
+    g.font = '11px Lexend, "IBM Plex Sans Arabic", sans-serif'; g.fillStyle = '#6b7393'; g.textAlign = 'left';
+    g.fillText(tr('light_row'), 2, top + 12);
+    g.fillStyle = '#f0f1f7'; g.fillRect(left, top, W - left - right, lightH);
+    for (let m = 0; m < Math.min(simMin, END); m += 2) { const L = lightAt(m, lightDynamic), [r, gg, b] = kelvinRGB(L.cct); g.fillStyle = L.b > 0.001 ? `rgba(${r | 0},${gg | 0},${b | 0},${0.2 + 0.8 * Math.sqrt(L.b)})` : '#1b2140'; g.fillRect(x(m), top, x(m + 2) - x(m) + 0.5, lightH); }
+    ['W', 'REM', 'N1', 'N2', 'N3'].forEach((s, i) => { const y = hyTop + i * rowH; g.fillStyle = '#6b7393'; g.fillText(s, 2, y + 4); g.strokeStyle = '#eef0f6'; g.beginPath(); g.moveTo(left, y); g.lineTo(W - right, y); g.stroke(); });
+    g.lineWidth = 2; let prevY = null;
+    for (const s of SEGMENTS) {
+        if (s.from >= simMin) break;
+        const to = Math.min(simMin, s.to), y = hyTop + LEVEL[s.stage] * rowH;
+        g.strokeStyle = STAGE_INFO[s.stage].color; g.beginPath(); if (prevY != null) { g.moveTo(x(s.from), prevY); g.lineTo(x(s.from), y); } else g.moveTo(x(s.from), y); g.lineTo(x(to), y); g.stroke();
+        if (s.stage === 'REM') { g.fillStyle = 'rgba(139, 111, 224, 0.35)'; g.fillRect(x(s.from), y - 4, x(to) - x(s.from), 8); }
+        prevY = y;
+    }
+    const sy = hyTop + 4 * rowH + 10;
+    g.fillStyle = '#6b7393'; g.fillText(tr('stim_row'), 2, sy + 4); g.fillStyle = '#e2557a';
+    for (let m = 0; m < END; m++) if (night.stim[m]) g.fillRect(x(m), sy, Math.max(1.5, x(m + 1) - x(m)), 6);
+    g.setLineDash([3, 3]); g.strokeStyle = '#b6bdd6'; g.beginPath(); g.moveTo(x(BED), top); g.lineTo(x(BED), sy + 8); g.stroke(); g.setLineDash([]);
+    g.strokeStyle = '#6f5fd6'; g.lineWidth = 1.5; g.beginPath(); g.moveTo(x(simMin), top); g.lineTo(x(simMin), sy + 8); g.stroke();
+    g.fillStyle = '#6b7393'; g.textAlign = 'center'; for (let m = 30; m <= END; m += 120) g.fillText(fmtClock(m), x(m), H - 4);
+}
+
+// ================================================================ texts & controls
+function renderTexts() {
+    document.documentElement.lang = lang; document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
+    document.title = tr('title');
+    document.querySelectorAll('[data-i18n]').forEach((el) => { el.textContent = tr(el.dataset.i18n); });
+    $('[data-lang] span').textContent = tr('lang');
+    $('[data-veil-start] span').textContent = tr('start');
+    const stepper = $('[data-stepper]');
+    stepper.querySelectorAll('.step').forEach((el) => el.remove());
+    CHAPTERS.forEach((c, i) => { const b = document.createElement('button'); b.type = 'button'; b.className = 'step'; b.dataset.chapter = c.id; b.innerHTML = `<i></i><span>${esc(tr('chapters')[i])}</span>`; stepper.append(b); });
+    $('[data-steps]').innerHTML = tr('stim_steps').map((s) => `<li>${esc(s)}</li>`).join('');
+    $('[data-rules]').innerHTML = tr('rules').map(([id, when, what]) => `<li data-rule="${id}"><b>${esc(when)}</b><span>${esc(what)}</span></li>`).join('');
+    $('[data-eeg-legend]').innerHTML = `<span><i style="background:#3b3f8f"></i>EEG</span><span><i style="background:repeating-linear-gradient(90deg,#2f5fd8 0 4px,transparent 4px 7px)"></i>${esc(tr('eeg_leg_thr'))} (${THR} µV)</span><span><i style="background:#2f5fd8;width:0.5rem;height:0.5rem;border-radius:50%"></i>${esc(tr('eeg_leg_trough'))}</span><span><i style="background:#e2557a;width:0.2rem;height:0.8rem"></i>${esc(tr('eeg_leg_pulse'))}</span>`;
+    $('[data-bands]').innerHTML = [['delta', '0.5–4 Hz', '#2b3a8f'], ['theta', '4–8 Hz', '#4f7fd6'], ['alpha', '8–13 Hz', '#8b6fe0'], ['beta', '13–30 Hz', '#e2557a']]
+        .map(([k, hz, c]) => `<div class="band"><span><b>${esc(tr(`b_${k}`))}</b><small>${hz}</small></span><div class="bar"><i data-band="${k}" style="background:${c};width:25%"></i></div><output data-band-v="${k}">—</output></div>`).join('');
+    $('[data-tiles]').innerHTML = TILES.map((t) => `<div class="tile"><h4>${esc(tr(t.key))}</h4><div class="val" data-tv="${t.id}">—</div><div class="sub" data-ts="${t.id}">${t.sub ? esc(tr(t.sub)) : ''}</div><canvas data-tc="${t.id}"></canvas></div>`).join('');
+    $('[data-sensors]').innerHTML = SENSORS.map((s) => `<div class="sensor"><h4><i style="background:${s.color}"></i>${esc(s.title[lang])}<span class="tag-sim" style="background:var(--lav-soft);color:var(--lav)">${esc(tr(`role_${s.role}`))}</span></h4><dl>${[['what', 'what'], ['where_l', 'where'], ['why_l', 'why']].map(([lk, k]) => `<div><dt>${esc(tr(lk))}</dt><dd>${esc(s.full[k][lang])}</dd></div>`).join('')}</dl></div>`).join('');
+    $('[data-science]').innerHTML = SCIENCE.map((s) => `<li>${s[lang]}</li>`).join('');
+    $('[data-sources]').innerHTML = `${esc(tr('sources'))} ` + SOURCES.map(([url, name]) => `<a href="${url}" target="_blank" rel="noopener">${esc(name[lang])}</a>`).join(' · ');
+    renderCard(); updateMain(); updateDetails();
+}
+const PLAY_ICON = '<svg viewBox="0 0 24 24"><path d="M7 4l13 8-13 8z" fill="currentColor"/></svg>';
+const PAUSE_ICON = '<svg viewBox="0 0 24 24"><rect x="6" y="4" width="4" height="16" rx="1.2" fill="currentColor"/><rect x="14" y="4" width="4" height="16" rx="1.2" fill="currentColor"/></svg>';
+function updateButtons() {
+    const play = $('[data-play]');
+    if (play.dataset.state !== String(running)) { play.dataset.state = String(running); play.innerHTML = running ? PAUSE_ICON : PLAY_ICON; play.setAttribute('aria-label', running ? 'pause' : 'play'); }
+    $('[data-speed-label]').textContent = tr('speed', { n: speed });
+    $('[data-veil]').hidden = started;
+    const sb = $('[data-stim-toggle]'); sb.textContent = tr(stimEnabled ? 'stim_on' : 'stim_off'); sb.setAttribute('aria-pressed', String(stimEnabled));
+    const lb = $('[data-light-toggle]'); lb.textContent = tr(lightDynamic ? 'light_on' : 'light_off'); lb.setAttribute('aria-pressed', String(lightDynamic));
+    const hb = $('[data-hear]'); hb.textContent = tr('hear'); hb.setAttribute('aria-pressed', String(hearPulses));
+}
+const arousalDone = new Set();
+function resetEngine(at) {
+    seed = 20261114 + Math.round(at * 7);
+    simMin = at; finished = false; lastMinute = Math.floor(at) - 1;
+    Object.assign(det, { state: 'idle', step: 0, count: 0, response: null, lastAmp: null });
+    markers.length = 0;
+    Object.assign(assist, { guide: false, vol: 3, quiet: 0, best: 0, bad: null, cap: VOL_MAX, stimWakes: 0, natWakes: 0, lastWake: null, learnedAt: -1e9 });
+    G.arousalUntil = -1;
+    night.hr.fill(null); night.hrv.fill(null); night.temp.fill(null); night.stim.fill(0);
+    arousalDone.clear(); for (const a of AROUSALS) if (a < at) arousalDone.add(a);
+    chapterSeen = new Set();
+    modeNow = modeAt(simMin);
+    Object.assign(w, TARGETS[modeNow]);   // start the brain in the right state, no slow fade-in
+}
+function jumpTo(id) {
+    const ch = CHAPTERS.find((c) => c.id === id); if (!ch) return;
+    resetEngine(ch.at);
+    if (ch.vol) assist.vol = ch.vol;
+    if (ch.quiet) assist.quiet = ch.quiet;
+    if (id === 'waking') assist.best = ch.vol;
+    started = true; running = true;
+    updateMain(); updateDetails();
+}
+function startOrToggle() {
+    if (finished) { resetEngine(0); }
+    if (!started) { started = true; running = true; }
+    else running = !running;
+    updateButtons();
+}
+$('[data-stepper]').addEventListener('click', (e) => { const b = e.target.closest('[data-chapter]'); if (b) jumpTo(b.dataset.chapter); });
+$('[data-play]').addEventListener('click', startOrToggle);
+$('[data-veil-start]').addEventListener('click', startOrToggle);
+$('[data-reset]').addEventListener('click', () => { resetEngine(0); started = true; running = true; updateMain(); });
+const speedRange = $('[data-speed-range]');
+speedRange.value = String(speedToSlider(speed));
+speedRange.addEventListener('input', () => { speed = sliderToSpeed(Number(speedRange.value)); updateButtons(); });
+$('[data-stim-toggle]').addEventListener('click', () => { stimEnabled = !stimEnabled; updateButtons(); });
+$('[data-light-toggle]').addEventListener('click', () => { lightDynamic = !lightDynamic; updateButtons(); });
+$('[data-hear]').addEventListener('click', () => { hearPulses = !hearPulses; if (hearPulses) { ensureAudio(); audioCtx.resume?.(); } updateButtons(); });
+function showDetails(on) {
+    detailsOpen = on;
+    $('[data-view-main]').hidden = on; $('[data-view-details]').hidden = !on;
+    window.scrollTo(0, 0);
+    if (on) updateDetails(); else resize();
+}
+$('[data-details-open]').addEventListener('click', () => showDetails(true));
+$('[data-details-close]').addEventListener('click', () => showDetails(false));
+$('[data-lang]').addEventListener('click', () => {
+    lang = lang === 'ar' ? 'en' : 'ar';
+    try { localStorage.setItem('orbitcare-sleep-lang', lang); } catch { /* language just isn't remembered */ }
+    renderTexts();
+});
+
+// ================================================================ main loop
+function resize() { const { clientWidth: wd, clientHeight: h } = stage; if (!wd || !h) return; renderer.setSize(wd, h, false); camera.aspect = wd / h; camera.updateProjectionMatrix(); }
+new ResizeObserver(resize).observe(stage);
+resize();
+
+let acc = 0;
+function advancePhysiology(dt) {
+    modeNow = modeAt(simMin);
+    for (const a of AROUSALS) if (simMin >= a && !arousalDone.has(a) && simMin < a + 30) { arousalDone.add(a); startArousal(false); }
+    assist.guide = stimEnabled && (modeNow === 'winddown' || modeNow === 'relaxed') && bands.beta >= 0.08;
+    const [hr, rmssd, br] = VITALS[modeNow], k = 1 - Math.exp(-dt / 2);
+    heart.hr += (hr + (tReal < G.arousalUntil ? 14 : 0) - heart.hr) * k; heart.rmssd += (rmssd - heart.rmssd) * k;
+    breathRate += ((assist.guide ? 6 : br) - breathRate) * k;
+    acc += dt * FS;
+    while (acc >= 1) { stepSample(); acc -= 1; }
+}
+modeNow = modeAt(simMin);
+Object.assign(w, TARGETS[modeNow]);
+for (let i = 0; i < FS * 8; i++) stepSample();
+updateBands(); computeVitals();
+
+function updateGlows(now) {
+    const latest = (buf) => buf[((n - 1) % BUF + BUF) % BUF];
+    const level = {
+        eeg: 0.4 + 0.6 * Math.min(1, Math.abs(latest(eegBuf)) / 90), eog: 0.35 + 0.65 * Math.min(1, Math.abs(latest(eogBuf)) / 120),
+        ppg: 0.3 + 0.7 * Math.min(1, latest(ppgBuf)), imu: 0.4 + 0.6 * Math.min(1, imu.move / 15), temp: 0.8,
+        audio: Math.max(assist.guide ? 0.55 + 0.4 * Math.sin(G.ph.resp) : 0.35, now - pulseFlash < 250 ? 1.2 : 0),
+    };
+    for (const [id, meshes] of Object.entries(glowsBy)) for (const m of meshes) m.material.color.copy(m.userData.base).multiplyScalar(level[id] * (id === selected && cardOpen ? 1.3 : 1));
+    const pulse = reduceMotion ? 0.4 : 0.25 + 0.3 * (0.5 + 0.5 * Math.sin(now / 280));
+    for (const [id, meshes] of Object.entries(podsBy)) for (const m of meshes) { m.material.emissive.set(SENSOR_COLOR[id]); m.material.emissiveIntensity = id === selected && cardOpen ? pulse : 0; }
+    for (const r of pulseRings) { const age = (now - pulseFlash) / 1000; r.material.opacity = age < 0.6 ? 0.9 * (1 - age / 0.6) : 0; r.scale.setScalar(1 + age * 2.2); }
+}
+const ease = (f) => 1 - (1 - f) ** 3;
+let bandT = 0, panelT = 0, liveT = 0, last = performance.now();
+function tick(dt, now) {
+    if (running) {
+        simMin = Math.min(END, simMin + dt * speed / 60);
+        advancePhysiology(dt); updateBody(dt, tReal); updateAir(dt);
+        if (simMin >= END) { running = false; finished = true; }
+        const mNow = Math.floor(Math.min(simMin, END - 1));
+        computeVitals();
+        const ok = stimEligibility() === 'ok';
+        for (let m = lastMinute + 1; m <= mNow; m++) { night.hr[m] = vit.hr; night.hrv[m] = vit.rmssd; night.temp[m] = vit.temp; if (ok) night.stim[m] = 1; }
+        if (mNow > lastMinute) lastMinute = mNow;
+        if (ok) night.stim[mNow] = 1;
+        bandT += dt; if (bandT > 0.25) { bandT = 0; updateBands(); }
+        liveT += dt; if (liveT > 0.25) { liveT = 0; live.move.push(imu.move); live.eog.push(vit.eogAct); live.pitch.push(imu.pitch); for (const key in live) if (live[key].length > 120) live[key].shift(); }
+    } else if (!started) { modeNow = modeAt(simMin); updateBody(0, tReal); }
+    applyLight(dt);
+    updateGlows(now);
+    if (turn) { const f = Math.min(1, (now - turn.start) / turn.ms); camera.position.lerpVectors(turn.fromPos, turn.toPos, ease(f)); controls.target.lerpVectors(turn.fromTarget, turn.toTarget, ease(f)); if (f >= 1) turn = null; }
+}
+function draw(dt) {
+    if (!detailsOpen) {
+        controls.update(); renderer.render(scene, camera); placeLeader();
+        miniWave($('[data-ind-waves]'), eegBuf, 3, 130, ['#e2557a', '#c45be0'], true);
+        drawCardWave();
+    } else {
+        drawTrace($('[data-eeg]'), eegBuf, 150, { threshold: THR, markers: true, color: '#3b3f8f', bar: 100 });
+        drawTrace($('[data-eog]'), eogBuf, 250, { color: '#2f8fd8', bar: 200 });
+    }
+    panelT += dt; if (panelT > 0.2) { panelT = 0; if (detailsOpen) updateDetails(); updateMain(); }
+}
+function frame(now) { const dt = Math.min(0.1, (now - last) / 1000); last = now; tick(dt, now); draw(dt); requestAnimationFrame(frame); }
+
+applyLight(); updateBody(0, 0); renderTexts();
+if (params.get('chapter')) jumpTo(params.get('chapter'));
+else if (params.has('run')) startOrToggle();
+if (params.has('details')) showDetails(true);
+for (let i = 0, warm = Math.min(20000, Number(params.get('warm')) || 0); i < warm; i++) tick(1 / 60, performance.now());
+draw(1); updateMain();
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>

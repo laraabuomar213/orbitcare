@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OrbitCare Submission</title>
+<!-- OrbitCare — official 7-slide submission deck for NASA Space Apps 2026 (English, with an Arabic reading version).
+     Built around three things: the problem, the solution, and the source. Every fact shows its source in full.
+     1 title · 2 six risks · 3 the gap + our answer · 4 how it works · 5 problem → solution · 6 the prototype · 7 impact.
+     Status tags: Prototype (works in our website) · Design concept (specified, not built) · Research direction (not tested in space).
+     Keys: → / ← / Space / PageDown / PageUp · L language · F full screen. ?lang=ar|en · ?print → one slide per PDF page.
+     Screenshots: shots/*.png (real pages of the prototype, temporary demo accounts). Works offline. -->
+<link rel="stylesheet" href="../../assets/css/fonts.css">
+<style>
+:root {
+    --space: #0b1130; --navy: #1a2250; --ink: #f4f6ff; --soft: #bcc5e8; --muted: #8a95c2;
+    --accent: #5b8cff; --accent-2: #8fb0ff; --warm: #ffb547; --warm-2: #ffd08a; --green: #4fd1a1;
+    --line: rgba(185, 194, 230, 0.16); --card: rgba(255, 255, 255, 0.05);
+    --font: "Lexend", "IBM Plex Sans Arabic", system-ui, sans-serif;
+}
+[lang="ar"] { --font: "IBM Plex Sans Arabic", "Lexend", system-ui, sans-serif; }
+* { box-sizing: border-box; margin: 0; }
+html, body { height: 100%; }
+body { overflow: hidden; background: #060a1c; color: var(--ink); font-family: var(--font); }
+button, a { font: inherit; }
+bdi { unicode-bidi: isolate; }
+
+.viewport { position: fixed; inset: 0; display: grid; place-items: center; }
+.stage {
+    position: relative; width: min(100vw, calc(100vh * 16 / 9)); aspect-ratio: 16 / 9; overflow: hidden; container-type: size;
+    background:
+        radial-gradient(1.2px 1.2px at 12% 18%, #fff7 50%, transparent 51%), radial-gradient(1px 1px at 78% 9%, #fff6 50%, transparent 51%),
+        radial-gradient(1.3px 1.3px at 64% 76%, #fff6 50%, transparent 51%), radial-gradient(1px 1px at 30% 88%, #fff5 50%, transparent 51%),
+        radial-gradient(1.1px 1.1px at 92% 58%, #fff6 50%, transparent 51%), radial-gradient(1px 1px at 47% 6%, #fff5 50%, transparent 51%),
+        radial-gradient(ellipse 70% 60% at 88% 112%, rgba(91, 140, 255, 0.2), transparent 70%),
+        radial-gradient(ellipse 60% 50% at 0% -12%, rgba(143, 176, 255, 0.1), transparent 70%),
+        linear-gradient(160deg, var(--navy) 0%, var(--space) 72%);
+}
+.slide { position: absolute; inset: 0; display: flex; flex-direction: column; padding: 6cqh 5cqw 4.5cqh; opacity: 0; visibility: hidden; transition: opacity 0.4s ease, visibility 0s linear 0.4s; }
+.slide.is-active { opacity: 1; visibility: visible; transition: opacity 0.4s ease; }
+
+.head { display: flex; align-items: flex-end; justify-content: space-between; gap: 2cqw; }
+.kicker { display: flex; align-items: center; gap: 0.8cqw; font-size: 1.15cqw; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase; color: var(--accent-2); }
+[lang="ar"] .kicker { letter-spacing: 0; font-size: 1.4cqw; text-transform: none; }
+.kicker .n { display: inline-grid; place-items: center; width: 2.1cqw; height: 2.1cqw; border-radius: 50%; border: 1px solid var(--accent-2); font-size: 1cqw; letter-spacing: 0; }
+h2 { margin-top: 1cqh; font-size: 2.8cqw; font-weight: 600; line-height: 1.15; text-wrap: balance; }
+[lang="ar"] h2 { font-size: 2.6cqw; line-height: 1.35; }
+.brand { display: flex; align-items: center; gap: 0.5cqw; flex: none; font-size: 1.15cqw; font-weight: 600; color: var(--soft); }
+.brand svg { width: 1.4cqw; height: 1.4cqw; color: var(--accent); }
+.foot { margin-top: auto; padding-top: 1.6cqh; display: flex; align-items: flex-end; justify-content: space-between; gap: 2cqw; }
+.foot > span:last-child { flex: none; direction: ltr; unicode-bidi: isolate; font-size: 0.9cqw; color: var(--muted); }
+.accent { color: var(--accent-2); }
+.card { border: 1px solid var(--line); border-radius: 1.2cqw; background: var(--card); }
+.ico { display: grid; place-items: center; flex: none; width: 3.2cqw; height: 3.2cqw; border-radius: 0.9cqw; background: rgba(91, 140, 255, 0.15); color: var(--accent-2); }
+.ico svg { width: 1.9cqw; height: 1.9cqw; }
+.slide p.src-line { display: flex; gap: 0.5cqw; font-size: 0.88cqw; line-height: 1.45; color: var(--muted); }
+.slide .pair p.src-line { font-size: 0.8cqw; }
+.src-line::before { content: "↗"; color: var(--accent-2); }
+[dir="rtl"] .src-line::before { content: "↖"; }
+
+.tag { display: inline-flex; align-items: center; gap: 0.4cqw; padding: 0.35cqh 0.7cqw; border-radius: 999px; font-size: 0.85cqw; font-weight: 600; white-space: nowrap; }
+.tag::before { content: ""; width: 0.55cqw; height: 0.55cqw; border-radius: 50%; background: currentColor; }
+.tag.p { background: rgba(79, 209, 161, 0.13); color: var(--green); }
+.tag.c { background: rgba(143, 176, 255, 0.14); color: var(--accent-2); }
+.tag.r { background: rgba(255, 181, 71, 0.14); color: var(--warm); }
+.legend { display: flex; flex-wrap: wrap; gap: 0.6cqw 1cqw; }
+
+/* 1 · title */
+.s-title { justify-content: center; padding-inline: 6cqw; }
+.s-title .kicker { color: var(--warm); }
+.wordmark { display: flex; align-items: center; gap: 1.6cqw; margin-top: 2.6cqh; font-size: 8.4cqw; font-weight: 600; line-height: 1; letter-spacing: -0.02em; }
+.wordmark svg { width: 6.2cqw; height: 6.2cqw; color: var(--accent); filter: drop-shadow(0 0 2.2cqw rgba(91, 140, 255, 0.55)); }
+.tagline { margin-top: 3.4cqh; max-width: 54cqw; font-size: 2.15cqw; font-weight: 500; line-height: 1.35; }
+.context { margin-top: 2.4cqh; max-width: 48cqw; font-size: 1.3cqw; line-height: 1.55; color: var(--soft); }
+.team { position: absolute; bottom: 5cqh; inset-inline-start: 6cqw; font-size: 1.1cqw; color: var(--muted); }
+.team b { color: var(--ink); font-weight: 600; }
+.trajectory { position: absolute; inset-inline-end: 3cqw; top: 8cqh; width: 40cqw; height: 84cqh; }
+
+/* 2 · risks */
+.risks { display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: 1fr 1fr; gap: 1.3cqw; margin-top: 3cqh; flex: 1; min-height: 0; }
+.risk { display: flex; flex-direction: column; padding: 2.4cqh 1.6cqw; }
+.risk h3 { display: flex; align-items: center; gap: 0.9cqw; font-size: 1.5cqw; font-weight: 600; }
+.risk b { margin-top: 1.8cqh; font-size: 3.4cqw; font-weight: 600; line-height: 1; color: var(--warm); }
+.risk p { margin-top: 1.2cqh; font-size: 1.25cqw; line-height: 1.5; color: var(--soft); }
+.risk .src-line { margin-top: auto; padding-top: 1.4cqh; }
+
+/* 3 · gap + answer */
+.gap { display: grid; grid-template-columns: 1fr 1.1fr; gap: 2cqw; margin-top: 3cqh; flex: 1; min-height: 0; }
+.col-title { font-size: 1.05cqw; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: var(--warm); }
+[lang="ar"] .col-title { letter-spacing: 0; font-size: 1.3cqw; }
+.col-title.blue { color: var(--accent-2); }
+.reasons { display: grid; gap: 1.2cqw; margin-top: 1.6cqh; padding: 0; list-style: none; counter-reset: r; }
+.reasons li { display: grid; grid-template-columns: 3cqw 1fr; gap: 1.1cqw; padding: 2.2cqh 1.5cqw; counter-increment: r; }
+.reasons li::before { content: counter(r); display: grid; place-items: center; width: 3cqw; height: 3cqw; border-radius: 50%; background: rgba(255, 181, 71, 0.15); color: var(--warm); font-size: 1.3cqw; font-weight: 600; }
+.reasons h3 { font-size: 1.45cqw; font-weight: 600; }
+.reasons p { margin-top: 0.6cqh; font-size: 1.2cqw; line-height: 1.5; color: var(--soft); }
+.reasons .src-line { margin-top: 0.8cqh; }
+.answer { display: flex; flex-direction: column; padding: 2.8cqh 2cqw; border-color: rgba(91, 140, 255, 0.5); background: linear-gradient(180deg, rgba(91, 140, 255, 0.13), rgba(91, 140, 255, 0.03)); }
+.answer .big { margin-top: 1.4cqh; font-size: 1.9cqw; font-weight: 500; line-height: 1.4; }
+.loop { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.8cqw; margin-top: 3cqh; }
+.loop .node { position: relative; padding: 2.8cqh 1cqw; border-radius: 1cqw; background: rgba(6, 10, 28, 0.45); text-align: center; }
+.loop .node i { display: grid; place-items: center; width: 2.6cqw; height: 2.6cqw; margin: 0 auto 1.4cqh; border-radius: 50%; background: var(--accent); color: #fff; font-style: normal; font-size: 1.15cqw; font-weight: 600; }
+.loop .node b { display: block; font-size: 1.45cqw; font-weight: 600; }
+.loop .node span { display: block; margin-top: 0.8cqh; font-size: 1.08cqw; line-height: 1.4; color: var(--soft); }
+.loop-back { margin-top: 1.4cqh; font-size: 1.1cqw; color: var(--warm-2); text-align: center; }
+.not { margin-top: auto; padding-top: 2cqh; font-size: 1.15cqw; line-height: 1.5; color: var(--soft); }
+.not b { color: var(--ink); font-weight: 600; }
+
+/* 4 · how it works */
+.flow { display: grid; grid-template-columns: 1fr auto 1.15fr auto 1fr; gap: 1.2cqw; align-items: stretch; margin-top: 3cqh; flex: 1; min-height: 0; }
+.fcol { display: flex; flex-direction: column; }
+.fcol .col-title { margin-bottom: 1.4cqh; color: var(--muted); }
+.list { display: grid; gap: 1cqw; flex: 1; grid-auto-rows: 1fr; padding: 0; list-style: none; }
+.list li { display: flex; align-items: center; gap: 1cqw; padding: 1.6cqh 1.3cqw; }
+.list h4 { font-size: 1.3cqw; font-weight: 600; }
+.list p { margin-top: 0.4cqh; font-size: 1.02cqw; line-height: 1.45; color: var(--soft); }
+.arrow { align-self: center; color: var(--accent); }
+.arrow svg { width: 2.2cqw; height: 2.2cqw; }
+[dir="rtl"] .arrow svg { transform: scaleX(-1); }
+.core { display: flex; flex-direction: column; padding: 2.2cqh 1.6cqw; border: 1px solid rgba(91, 140, 255, 0.5); border-radius: 1.2cqw; background: linear-gradient(180deg, rgba(91, 140, 255, 0.14), rgba(91, 140, 255, 0.04)); }
+.core-name { display: flex; align-items: center; gap: 0.6cqw; font-size: 1.6cqw; font-weight: 600; }
+.core-name svg { width: 1.6cqw; height: 1.6cqw; color: var(--accent); }
+.core-sub { margin-top: 0.5cqh; font-size: 1cqw; color: var(--soft); }
+.pipe { display: grid; gap: 0.8cqw; margin-top: 2cqh; flex: 1; grid-auto-rows: 1fr; padding: 0; list-style: none; counter-reset: s; }
+.pipe li { display: flex; align-items: center; gap: 1cqw; padding: 1.2cqh 1.2cqw; border-radius: 0.9cqw; background: rgba(6, 10, 28, 0.45); counter-increment: s; }
+.pipe li::before { content: counter(s); flex: none; display: grid; place-items: center; width: 2cqw; height: 2cqw; border-radius: 50%; background: var(--accent); color: #fff; font-size: 0.95cqw; font-weight: 600; }
+.pipe b { display: block; font-size: 1.25cqw; font-weight: 600; }
+.pipe span { display: block; margin-top: 0.3cqh; font-size: 0.98cqw; line-height: 1.4; color: var(--soft); }
+.data-note { margin-top: 1.8cqh; padding: 1.3cqh 1.5cqw; border-radius: 1cqw; background: var(--card); font-size: 1.05cqw; line-height: 1.5; color: var(--soft); }
+.data-note b { color: var(--ink); font-weight: 600; }
+
+/* 5 · problem → solution */
+.pairs { display: grid; gap: 0.85cqw; margin-top: 2.6cqh; padding: 0; list-style: none; flex: 1; grid-auto-rows: 1fr; min-height: 0; }
+.pair { display: grid; grid-template-columns: 1fr 2.4cqw 1.35fr; align-items: center; }
+.pair .prob { align-self: stretch; display: flex; flex-direction: column; justify-content: center; padding: 1cqh 1.3cqw; border: 1px solid rgba(255, 181, 71, 0.25); border-radius: 1cqw; background: rgba(255, 181, 71, 0.05); }
+.pair .prob b { font-size: 1.15cqw; font-weight: 600; color: var(--warm-2); }
+.pair .prob .src-line { margin-top: 0.4cqh; font-size: 0.8cqw; }
+.pair .to { justify-self: center; color: var(--accent); }
+.pair .to svg { width: 1.6cqw; height: 1.6cqw; }
+[dir="rtl"] .pair .to svg { transform: scaleX(-1); }
+.pair .sol { align-self: stretch; display: flex; align-items: center; gap: 1cqw; padding: 1cqh 1.3cqw; border: 1px solid rgba(91, 140, 255, 0.35); border-radius: 1cqw; background: rgba(91, 140, 255, 0.07); }
+.pair .sol .ico { width: 2.6cqw; height: 2.6cqw; }
+.pair .sol .ico svg { width: 1.5cqw; height: 1.5cqw; }
+.pair .sol h4 { display: flex; flex-wrap: wrap; align-items: center; gap: 0.3cqh 0.7cqw; font-size: 1.15cqw; font-weight: 600; }
+.pair .sol p { margin-top: 0.3cqh; font-size: 0.95cqw; line-height: 1.42; color: var(--soft); }
+.pairs-head { display: grid; grid-template-columns: 1fr 2.4cqw 1.35fr; margin-top: 2.4cqh; font-size: 1cqw; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; }
+[lang="ar"] .pairs-head { letter-spacing: 0; font-size: 1.25cqw; }
+.pairs-head span:first-child { color: var(--warm); }
+.pairs-head span:last-child { grid-column: 3; color: var(--accent-2); }
+.pairs-head + .pairs { margin-top: 1cqh; }
+
+/* 6 · prototype */
+.shots { display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: 1fr 1fr; gap: 1.2cqw; margin-top: 2.6cqh; flex: 1; min-height: 0; }
+.shot { display: flex; flex-direction: column; min-height: 0; overflow: hidden; border: 1px solid var(--line); border-radius: 1cqw; background: #0a1030; }
+.shot img { flex: 1; min-height: 0; width: 100%; object-fit: cover; object-position: top center; display: block; }
+.shot .ph { flex: 1; display: grid; place-items: center; font-size: 1cqw; color: var(--muted); }
+.shot figcaption { padding: 1cqh 1.1cqw; background: rgba(255, 255, 255, 0.05); }
+.shot figcaption b { display: block; font-size: 1.12cqw; font-weight: 600; }
+.shot figcaption span { display: block; margin-top: 0.2cqh; font-size: 0.92cqw; line-height: 1.4; color: var(--soft); }
+.why-sim { margin-top: 1.8cqh; padding: 1.3cqh 1.5cqw; border: 1px solid rgba(255, 181, 71, 0.28); border-radius: 1cqw; background: rgba(255, 181, 71, 0.05); font-size: 1.1cqw; line-height: 1.5; }
+.why-sim b { color: var(--warm-2); font-weight: 600; }
+
+/* 7 · impact */
+.impact { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.3cqw; margin-top: 3cqh; }
+.impact .card { padding: 2.4cqh 1.6cqw; }
+.impact h3 { display: flex; align-items: center; gap: 0.9cqw; font-size: 1.5cqw; font-weight: 600; }
+.impact p { margin-top: 1.2cqh; font-size: 1.2cqw; line-height: 1.5; color: var(--soft); }
+.road { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.3cqw; margin-top: 2.4cqh; }
+.step { padding: 2cqh 1.6cqw; border-top: 0.35cqh solid; border-radius: 0 0 1cqw 1cqw; background: var(--card); }
+.step .when { font-size: 1cqw; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; }
+[lang="ar"] .step .when { letter-spacing: 0; font-size: 1.2cqw; }
+.step p { margin-top: 0.8cqh; font-size: 1.15cqw; line-height: 1.5; color: var(--soft); }
+.step.now { border-color: var(--green); } .step.now .when { color: var(--green); }
+.step.next { border-color: var(--accent-2); } .step.next .when { color: var(--accent-2); }
+.step.later { border-color: var(--warm); } .step.later .when { color: var(--warm); }
+.vision { margin-top: 4cqh; display: flex; align-items: center; gap: 1.4cqw; }
+.refs { margin-top: auto; padding-top: 1.8cqh; border-top: 1px solid var(--line); }
+.refs h4 { font-size: 0.95cqw; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); }
+[lang="ar"] .refs h4 { letter-spacing: 0; font-size: 1.15cqw; }
+.refs ol { columns: 2; column-gap: 3cqw; margin-top: 1cqh; padding-inline-start: 1.6cqw; font-size: 0.88cqw; line-height: 1.55; color: var(--soft); }
+.refs li { break-inside: avoid; }
+.refs li::marker { color: var(--accent-2); }
+.vision svg { width: 3.4cqw; height: 3.4cqw; flex: none; color: var(--accent); filter: drop-shadow(0 0 1.4cqw rgba(91, 140, 255, 0.6)); }
+.vision p { font-size: 2.1cqw; font-weight: 500; line-height: 1.3; }
+
+/* controls */
+.progress { position: absolute; left: 0; bottom: 0; height: 0.45cqh; background: var(--accent); transition: width 0.4s ease; }
+[dir="rtl"] .progress { left: auto; right: 0; }
+.controls { position: fixed; bottom: 1rem; inset-inline-end: 1rem; z-index: 5; display: flex; align-items: center; gap: 0.35rem; padding: 0.35rem; border-radius: 999px; background: rgba(12, 18, 48, 0.85); border: 1px solid var(--line); transition: opacity 0.3s ease; }
+body.idle .controls { opacity: 0; }
+.ctrl { min-width: 2.4rem; height: 2.4rem; padding: 0 0.8rem; border: 0; border-radius: 999px; background: transparent; color: var(--soft); font-size: 0.85rem; cursor: pointer; }
+.ctrl:hover { background: rgba(91, 140, 255, 0.2); color: #fff; }
+.ctrl svg { width: 1.1rem; height: 1.1rem; vertical-align: middle; }
+[dir="rtl"] .ctrl[data-prev] svg, [dir="rtl"] .ctrl[data-next] svg { transform: scaleX(-1); }
+.count { direction: ltr; unicode-bidi: isolate; min-width: 3rem; text-align: center; font-size: 0.85rem; color: var(--soft); }
+
+/* ?print → one 1600×900 page per slide (PDF export) */
+body.print { overflow: visible; height: auto; }
+body.print .viewport, body.print .controls { display: none; }
+.print-pages .page { width: 1600px; height: 900px; overflow: hidden; break-after: page; }
+.print-pages .page:last-child { break-after: auto; }
+.print-pages .stage { width: 100%; }
+.print-pages .slide { opacity: 1; visibility: visible; transition: none; }
+@media print { * { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
+@media (prefers-reduced-motion: reduce) { .slide, .progress { transition: none; } }
+</style>
+</head>
+<body>
+<div class="viewport"><main class="stage" data-stage><div data-slides></div><div class="progress" data-progress></div></main></div>
+<nav class="controls" aria-label="Slides">
+    <button class="ctrl" type="button" data-prev aria-label="Previous"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg></button>
+    <span class="count" data-count></span>
+    <button class="ctrl" type="button" data-next aria-label="Next"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></button>
+    <button class="ctrl" type="button" data-lang></button>
+    <button class="ctrl" type="button" data-full></button>
+</nav>
+
+<script>
+// ---------------------------------------------------------------- icons
+const P = {
+    star: '<path d="M12 0C12.7 7.6 16.4 11.3 24 12C16.4 12.7 12.7 16.4 12 24C11.3 16.4 7.6 12.7 0 12C7.6 11.3 11.3 7.6 12 0Z" fill="currentColor" stroke="none"/>',
+    moon: '<path d="M19.5 14.5A8 8 0 0 1 9.5 4.5a8 8 0 1 0 10 10z"/>',
+    mind: '<path d="M9 4.5a3 3 0 0 0-3 3 3 3 0 0 0-1.5 5.3A3 3 0 0 0 7 17.5a2.5 2.5 0 0 0 5 .5V5.5a2 2 0 0 0-3-1z"/><path d="M15 4.5a3 3 0 0 1 3 3 3 3 0 0 1 1.5 5.3 3 3 0 0 1-2.5 4.7 2.5 2.5 0 0 1-5 .5"/>',
+    bone: '<path d="M8.5 8.5l7 7"/><path d="M6.2 9.8a2.3 2.3 0 1 1 3.6-3.6 2.3 2.3 0 1 1 3.6-0.1"/><path d="M17.8 14.2a2.3 2.3 0 1 1-3.6 3.6 2.3 2.3 0 1 1-3.6.1"/>',
+    heart: '<path d="M12 20s-7-4.4-8.6-8.9C2.3 8 4.3 5 7.4 5c1.9 0 3.4 1 4.6 2.7C13.2 6 14.7 5 16.6 5c3.1 0 5.1 3 4 6.1C19 15.6 12 20 12 20z"/>',
+    eye: '<path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="2.8"/>',
+    earth: '<circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5c2.5 2.4 3.6 5.2 3.6 8.5S14.5 18.1 12 20.5C9.5 18.1 8.4 15.3 8.4 12S9.5 5.9 12 3.5z"/>',
+    vest: '<path d="M9 3.5L5 6v14.5h14V6l-4-2.5"/><path d="M9 3.5c.5 2 1.5 3 3 3s2.5-1 3-3M12 6.5v14"/>',
+    clip: '<rect x="5" y="4.5" width="14" height="16" rx="2.5"/><path d="M9 4.5V3.5h6v1M8.5 12.5l2.5 2.5 4.5-5"/>',
+    target: '<circle cx="12" cy="12" r="7.5"/><circle cx="12" cy="12" r="2.5"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3"/>',
+    scan: '<path d="M4 8V5.5A1.5 1.5 0 0 1 5.5 4H8M16 4h2.5A1.5 1.5 0 0 1 20 5.5V8M20 16v2.5a1.5 1.5 0 0 1-1.5 1.5H16M8 20H5.5A1.5 1.5 0 0 1 4 18.5V16"/><path d="M8 12h8"/>',
+    user: '<circle cx="12" cy="8.5" r="3.5"/><path d="M5 19.5c1-3.5 3.7-5.5 7-5.5s6 2 7 5.5"/>',
+    crew: '<circle cx="9" cy="8" r="3"/><path d="M3.5 19c.6-3.2 2.8-5 5.5-5s4.9 1.8 5.5 5"/><circle cx="16.5" cy="9" r="2.4"/><path d="M15.5 14.2c2.6-.3 4.6 1.3 5 4.3"/>',
+    shield: '<path d="M12 3l7.5 3v5.5c0 4.5-3.2 8.2-7.5 9.5-4.3-1.3-7.5-5-7.5-9.5V6z"/><path d="M9 12l2 2 4-4"/>',
+    pulse: '<path d="M3 12h4l2-5 3.5 10 2.5-7 1.5 2H21"/>',
+    detect: '<circle cx="11" cy="11" r="6.5"/><path d="M20.5 20.5l-4.8-4.8"/><path d="M8 11h1.5l1-2 1.5 4 1-2H15"/>',
+    chat: '<path d="M5 5.5h14a1.5 1.5 0 0 1 1.5 1.5v8.5A1.5 1.5 0 0 1 19 17H11l-4.5 3.5V17H5a1.5 1.5 0 0 1-1.5-1.5V7A1.5 1.5 0 0 1 5 5.5z"/>',
+    arrow: '<path d="M5 12h14M13 6l6 6-6 6"/>',
+};
+const svg = (n) => `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${P[n]}</svg>`;
+const ico = (n) => `<span class="ico">${svg(n)}</span>`;
+const brand = `<span class="brand">${svg('star')}OrbitCare</span>`;
+
+// ---------------------------------------------------------------- sources (verified for this project)
+const SRC = {
+    nasaHaz:  'NASA — Human Research Program, hazards of human spaceflight (nasa.gov/hrp)',
+    nasaBone: 'NASA — Hazard: gravity fields (nasa.gov/hrp/hazard-gravity-fields)',
+    nasaEx:   'NASA — Risk of reduced cardiorespiratory and musculoskeletal fitness',
+    barger:   'Barger et al., Lancet Neurology, 2014',
+    pvt:      'Basner, Mollicone & Dinges, Acta Astronautica, 2011 · NASA Spinoff, 2013',
+    phq:      'PHQ-4: Kroenke et al., 2009 · Samn-Perelli fatigue scale',
+    sleep:    'Closed-loop auditory stimulation, 2018 (PubMed 30215604) · Fehér et al., 2023 · NASA HERA lighting study, Rahman et al., 2022',
+    physio:   'PhysioNet — BIDMC PPG and Respiration Dataset v1.0.0',
+};
+const SRC_AR = {
+    nasaHaz:  'NASA — برنامج أبحاث صحة الإنسان، مخاطر رحلات الفضاء (nasa.gov/hrp)',
+    nasaBone: 'NASA — خطر الجاذبية المختلفة (nasa.gov/hrp/hazard-gravity-fields)',
+    nasaEx:   'NASA — خطر تراجع لياقة القلب والعضلات والعظام',
+    barger:   'Barger وآخرون، <bdi>Lancet Neurology, 2014</bdi>',
+    pvt:      'Basner وآخرون، <bdi>Acta Astronautica, 2011</bdi> · <bdi>NASA Spinoff, 2013</bdi>',
+    phq:      'PHQ-4: Kroenke وآخرون 2009 · مقياس Samn-Perelli للإرهاق',
+    sleep:    'دراسة التحفيز الصوتي 2018 (PubMed 30215604) · Fehér وآخرون 2023 · دراسة HERA للإضاءة من NASA، Rahman وآخرون 2022',
+    physio:   'PhysioNet — مجموعة BIDMC للنبض الضوئي والتنفس v1.0.0',
+};
+
+// Full reference list (slide 7). Kept in English in both versions, as published.
+const REFS = [
+    'NASA Human Research Program — Hazards of human spaceflight; Hazard: gravity fields. nasa.gov/hrp',
+    'NASA — Risk of reduced cardiorespiratory and musculoskeletal fitness (ISS exercise ~1.5 h/day).',
+    'Barger L.K. et al. Prevalence of sleep deficiency and use of hypnotic drugs in astronauts. Lancet Neurology, 2014.',
+    'Basner M., Mollicone D., Dinges D.F. Validity and sensitivity of a brief PVT (PVT-B). Acta Astronautica 69, 2011.',
+    'NASA Spinoff 2013 — Reaction Self Test on the ISS.',
+    'Kroenke K. et al. An ultra-brief screening scale for anxiety and depression: the PHQ-4. Psychosomatics, 2009.',
+    'Closed-loop auditory stimulation of sleep slow oscillations at home, 2018. PubMed 30215604.',
+    'Fehér et al., 2023 — feasibility study of sounds during sleep (University of Bern).',
+    'Rahman et al., 2022 — dynamic lighting study in NASA’s HERA analog.',
+    'PhysioNet — BIDMC PPG and Respiration Dataset v1.0.0. physionet.org/content/bidmc',
+];
+
+// ---------------------------------------------------------------- content
+const T = {
+    en: {
+        lang: 'العربية', full: 'Full screen', tags: ['Prototype', 'Design concept', 'Research direction'],
+        legend: ['Prototype — works in our website', 'Design concept — specified, not yet built', 'Research direction — not yet tested in space'],
+        s1: {
+            kicker: 'NASA Space Apps Challenge 2026 · Health monitoring software for astronauts',
+            tagline: 'A proactive health system that helps astronauts <span class="accent">understand their own health and act early</span> — on board, without waiting for Earth.',
+            context: 'Long missions expose crews to radiation, isolation, altered gravity and a closed environment. On the way to Mars, a message to Earth can take up to 20 minutes — one way.',
+            team: 'Team', teamName: '[Team name]', earth: 'Earth', mars: 'Mars', delay: 'up to ~20 min each way',
+        },
+        s2: {
+            kicker: 'The problem', title: 'Six health risks of long space missions',
+            risks: [
+                ['moon', 'Poor sleep', '~6 h', 'average sleep per night on the ISS — and 75% of crew members used sleep medication.', 'barger'],
+                ['bone', 'Bone & muscle loss', '1–1.5%', 'of bone mass can be lost per month in space.', 'nasaBone'],
+                ['heart', 'Heart & circulation', '', 'Altered gravity shifts body fluids toward the head and changes how the heart and blood vessels are regulated.', 'nasaHaz'],
+                ['mind', 'Behavioral health', '', 'Isolation and confinement are a NASA-recognized risk to mood, sleep and performance.', 'nasaHaz'],
+                ['eye', 'Fatigue', '', 'Sleep loss slows reactions in critical tasks — NASA tracks crew alertness on the ISS with a 3-minute reaction test.', 'pvt'],
+                ['earth', 'Distance from Earth', '20 min', 'one-way communication delay on the way to Mars — help from the ground is not immediate.', 'nasaHaz'],
+            ],
+        },
+        s3: {
+            kicker: 'The gap — and our answer', title: 'Monitoring in space is hard. OrbitCare is built for it.',
+            gapT: 'Why it is hard',
+            gap: [
+                ['Change is slow and silent', 'Bone loss, sleep debt and fatigue build up over weeks — a single check-up misses the trend.'],
+                ['Crew time is precious', 'Monitoring must run in the background or take minutes, not hours of tests.'],
+                ['Earth is far away', 'With delays of up to 20 minutes each way, interpretation has to happen on board.', 'nasaHaz'],
+            ],
+            ansT: 'Our answer',
+            big: 'OrbitCare tells the astronaut <span class="accent">what changed, what it means, and what to do next</span> — and alerts the crew when it matters.',
+            loop: [['Monitor', 'sensors + 1-minute check-ins'], ['Understand', 'clear green / yellow / red status'], ['Detect early', 'only changes that last'], ['Act', 'guidance + crew alert']],
+            loopBack: '↻ then keeps watching — did the action help?',
+            not: '<b>Proactive, not a data display.</b> Runs on board without internet · guidance, never diagnosis · private by default.',
+        },
+        s4: {
+            kicker: 'How OrbitCare works', title: 'From the astronaut’s body to the right action',
+            c1: 'What we measure', c2: 'On board', c3: 'Who acts',
+            src: [['vest', 'Vest & headband', 'Heart (ECG), oxygen, breathing, temperature, motion, radiation dose'], ['clip', 'Daily check-in', 'Sleep, fatigue, exercise, symptoms — 1 minute'], ['target', 'Alertness test', '3-minute reaction test + eye signs'], ['scan', 'Periodic checks', 'Bone density, blood pressure']],
+            core: 'Runs on the spacecraft — no internet needed',
+            pipe: [['Validate', 'every value keeps its source'], ['Analyze', 'ranges, trends, personal baseline'], ['Detect', 'a change must last to alert'], ['Explain', 'next step + AI assistant']],
+            out: [['user', 'Astronaut', 'sees the status and the next step'], ['crew', 'Crew', 'gets an emergency alert with what to do'], ['shield', 'Medical officer', 'follows the whole crew']],
+            note: '<b>Data in our prototype:</b> real clinical recordings of heart, oxygen and breathing — PhysioNet BIDMC — replayed in real time.',
+        },
+        s5: {
+            kicker: 'Problem → solution', title: 'Each risk has a specific answer',
+            hProb: 'The problem', hSol: 'OrbitCare’s solution',
+            pairs: [
+                ['Heart, oxygen and breathing can change silently', 'nasaHaz', 'pulse', 'Live vital signs + early-warning alerts', 'p', 'Alerts only when a change lasts 10 s; yellow escalates to red.'],
+                ['Bone loss of 1–1.5% per month', 'nasaBone', 'bone', 'Exercise & bone tracking', 'c', 'Daily exercise vs. the ISS routine of ~1.5 h; ultrasound bone screening vs. pre-flight DXA.'],
+                ['Fatigue slows reactions in critical tasks', 'pvt', 'target', 'Alertness check', 'p', 'NASA’s 3-minute reaction test format + blinks and eye closure measured on the device.'],
+                ['Mood, sleep and symptoms can’t be sensed', 'phq', 'clip', 'Daily check-in & wellbeing', 'p', 'One minute a day: sleep, fatigue, exercise, symptoms; weekly PHQ-4. Private by default.'],
+                ['~6 h sleep; 75% used sleep medication', 'barger', 'moon', 'Deep-sleep headband', 'r', 'Soft sounds timed to deep-sleep brain waves + NASA HERA-based cabin lighting.'],
+                ['Help from Earth is up to 20 min away', 'nasaHaz', 'crew', 'AI assistant + crew emergency', 'p', 'Guidance from the astronaut’s own data, offline; a critical alert warns every crewmate.'],
+            ],
+            sleepSrc: 'sleep',
+        },
+        s6: {
+            kicker: 'The prototype', title: 'A working system you can try',
+            shots: [
+                ['dashboard', 'Dashboard', 'Live vital signs and red oxygen alerts'],
+                ['vest', '3D vest', 'Each reading shown on the sensor that measures it'],
+                ['alertness', 'Alertness check', '3-minute reaction test, camera optional'],
+                ['assistant', 'AI health assistant', 'General doctor and specialists'],
+                ['crew', 'Crew emergency', 'Every crewmate is alerted at once'],
+                ['sleep', 'Sleep simulation', 'Sounds timed to deep-sleep waves'],
+            ],
+            missing: 'Screenshot',
+            why: '<b>Real data, real behavior:</b> the prototype runs on real clinical recordings, works offline, in English and Arabic, and passes 124 automated checks.',
+        },
+        s7: {
+            kicker: 'Impact & future', title: 'Earlier signs. Faster action. More independent crews.',
+            imp: [['shield', 'Safety', 'Lasting changes are flagged early, with a clear next step.'], ['detect', 'Earlier intervention', 'Slow, silent change becomes a visible trend.'], ['crew', 'Crew autonomy', 'Decisions happen on board — essential when Earth is minutes away.']],
+            road: [['now', 'Now', 'Working software prototype; vest, headband and sleep system designed.'], ['next', 'Next', 'Build the vest with validated sensors; test in Earth analogs such as NASA’s HERA.'], ['later', 'Moon & Mars', 'Mission-specific health models; sleep studies in orbit; tuning with flight surgeons.']],
+            vision: 'Wherever humans explore, their care should travel with them. <span class="accent">That is OrbitCare.</span>', refsT: 'References',
+        },
+    },
+    ar: {
+        lang: 'English', full: 'ملء الشاشة', tags: ['نموذج أولي', 'تصميم', 'اتجاه بحثي'],
+        legend: ['نموذج أولي — يعمل في موقعنا', 'تصميم — محدّد ولم يُصنع بعد', 'اتجاه بحثي — لم يُجرَّب في الفضاء بعد'],
+        s1: {
+            kicker: 'تحدي NASA Space Apps 2026 · برنامج لمراقبة صحة الرواد',
+            tagline: 'نظام صحي استباقي يساعد الرواد على <span class="accent">فهم صحتهم والتصرّف مبكرًا</span> — على متن المركبة، دون انتظار الأرض.',
+            context: 'المهمات الطويلة تعرّض الطاقم للإشعاع والعزلة والجاذبية المختلفة والبيئة المغلقة. وفي الطريق إلى المريخ، قد تحتاج رسالة إلى الأرض حتى 20 دقيقة — في اتجاه واحد.',
+            team: 'الفريق', teamName: '[اسم الفريق]', earth: 'الأرض', mars: 'المريخ', delay: 'حتى 20 دقيقة في كل اتجاه',
+        },
+        s2: {
+            kicker: 'المشكلة', title: 'ستة مخاطر صحية في المهمات الطويلة',
+            risks: [
+                ['moon', 'قلة النوم', '6 ساعات', 'تقريبًا، متوسط النوم في الليلة على المحطة — و<bdi>75%</bdi> من الرواد استخدموا أدوية للنوم.', 'barger'],
+                ['bone', 'فقدان العظام والعضلات', '<bdi>1–1.5%</bdi>', 'من كتلة العظام قد تُفقد كل شهر في الفضاء.', 'nasaBone'],
+                ['heart', 'القلب والدورة الدموية', '', 'الجاذبية المختلفة تنقل سوائل الجسم نحو الرأس وتغيّر طريقة تنظيم القلب والأوعية.', 'nasaHaz'],
+                ['mind', 'الصحة النفسية والسلوكية', '', 'العزلة والحبس خطر تعترف به NASA على المزاج والنوم والأداء.', 'nasaHaz'],
+                ['eye', 'الإرهاق', '', 'قلة النوم تبطئ ردّة الفعل في المهام الحرجة — وNASA تتابع يقظة الطاقم على المحطة باختبار ردّة فعل مدته 3 دقائق.', 'pvt'],
+                ['earth', 'البُعد عن الأرض', '20 دقيقة', 'تأخير الاتصال في اتجاه واحد في الطريق إلى المريخ — المساعدة من الأرض ليست فورية.', 'nasaHaz'],
+            ],
+        },
+        s3: {
+            kicker: 'الفجوة — وجوابنا', title: 'المراقبة في الفضاء صعبة. وOrbitCare مبني لذلك.',
+            gapT: 'لماذا هي صعبة',
+            gap: [
+                ['التغيّر بطيء وصامت', 'فقدان العظم وتراكم قلة النوم والإرهاق تتكوّن على مدى أسابيع — وفحص واحد لا يرى الاتجاه.'],
+                ['وقت الطاقم ثمين', 'يجب أن تعمل المراقبة في الخلفية أو تأخذ دقائق، لا ساعات من الفحوصات.'],
+                ['الأرض بعيدة', 'مع تأخير حتى 20 دقيقة في كل اتجاه، يجب أن يتم الفهم على المركبة.', 'nasaHaz'],
+            ],
+            ansT: 'جوابنا',
+            big: 'OrbitCare يخبر الرائد <span class="accent">ما الذي تغيّر، وماذا يعني، وماذا يفعل بعد ذلك</span> — وينبّه الطاقم حين يلزم.',
+            loop: [['نراقب', 'حسّاسات + تسجيل في دقيقة'], ['نفهم', 'حالة واضحة: أخضر / أصفر / أحمر'], ['نكتشف مبكرًا', 'فقط التغيّر المستمر'], ['نتصرّف', 'إرشاد + تنبيه الطاقم']],
+            loopBack: '↻ ثم يواصل المراقبة — هل نفعت الخطوة؟',
+            not: '<b>استباقي، لا مجرد عرض بيانات.</b> يعمل على المركبة دون إنترنت · إرشاد لا تشخيص · خاص افتراضيًا.',
+        },
+        s4: {
+            kicker: 'كيف يعمل OrbitCare', title: 'من جسم الرائد إلى التصرّف الصحيح',
+            c1: 'ماذا نقيس', c2: 'على المركبة', c3: 'مَن يتصرّف',
+            src: [['vest', 'السترة وعصابة الرأس', 'القلب (ECG)، الأكسجين، التنفس، الحرارة، الحركة، جرعة الإشعاع'], ['clip', 'التسجيل اليومي', 'النوم، الإرهاق، التمرين، الأعراض — دقيقة واحدة'], ['target', 'اختبار اليقظة', 'اختبار ردّة فعل 3 دقائق + علامات العين'], ['scan', 'فحوص دورية', 'كثافة العظم، ضغط الدم']],
+            core: 'يعمل على المركبة — دون حاجة للإنترنت',
+            pipe: [['التحقق', 'كل قيمة تحتفظ بمصدرها'], ['التحليل', 'نطاقات، اتجاهات، معدل شخصي'], ['الاكتشاف', 'التغيّر يجب أن يستمر ليصدر تنبيه'], ['الشرح', 'الخطوة التالية + مساعد ذكي']],
+            out: [['user', 'الرائد', 'يرى حالته والخطوة التالية'], ['crew', 'الطاقم', 'يصله تنبيه طوارئ مع ماذا يفعل'], ['shield', 'المسؤول الطبي', 'يتابع الطاقم كله']],
+            note: '<b>البيانات في نموذجنا:</b> تسجيلات سريرية حقيقية للقلب والأكسجين والتنفس — PhysioNet BIDMC — تُعاد لحظة بلحظة.',
+        },
+        s5: {
+            kicker: 'المشكلة ← الحل', title: 'لكل خطر جواب محدّد',
+            hProb: 'المشكلة', hSol: 'حل OrbitCare',
+            pairs: [
+                ['القلب والأكسجين والتنفس قد تتغيّر بصمت', 'nasaHaz', 'pulse', 'العلامات الحيوية المباشرة + إنذار مبكر', 'p', 'تنبيه فقط إذا استمر التغيّر 10 ثوانٍ؛ والأصفر يتصاعد إلى أحمر.'],
+                ['فقدان <bdi>1–1.5%</bdi> من العظم شهريًا', 'nasaBone', 'bone', 'متابعة التمرين والعظام', 'c', 'التمرين اليومي مقابل روتين المحطة (~1.5 ساعة)؛ فحص العظم بالموجات مقارنةً بـ DXA قبل الرحلة.'],
+                ['الإرهاق يبطئ ردّة الفعل في المهام الحرجة', 'pvt', 'target', 'فحص اليقظة', 'p', 'صيغة اختبار NASA لردّة الفعل (3 دقائق) + الرمش وإغلاق العين على الجهاز.'],
+                ['المزاج والنوم والأعراض لا تقيسها الحسّاسات', 'phq', 'clip', 'التسجيل اليومي والحالة النفسية', 'p', 'دقيقة يوميًا: النوم، الإرهاق، التمرين، الأعراض؛ وPHQ-4 أسبوعيًا. خاص افتراضيًا.'],
+                ['~6 ساعات نوم؛ و<bdi>75%</bdi> استخدموا أدوية للنوم', 'barger', 'moon', 'عصابة النوم العميق', 'r', 'أصوات خافتة في توقيت موجات النوم العميق + إضاءة المقصورة حسب دراسة HERA من NASA.'],
+                ['المساعدة من الأرض على بُعد حتى 20 دقيقة', 'nasaHaz', 'crew', 'مساعد ذكي + طوارئ الطاقم', 'p', 'إرشاد من بيانات الرائد نفسه دون إنترنت؛ والتنبيه الحرج يصل لكل الطاقم.'],
+            ],
+            sleepSrc: 'sleep',
+        },
+        s6: {
+            kicker: 'النموذج الأولي', title: 'نظام يعمل فعلًا ويمكن تجربته',
+            shots: [
+                ['dashboard', 'لوحة التحكم', 'العلامات الحيوية وتنبيهات الأكسجين الحمراء'],
+                ['vest', 'السترة ثلاثية الأبعاد', 'كل قراءة على الحسّاس الذي يقيسها'],
+                ['alertness', 'فحص اليقظة', 'اختبار ردّة فعل 3 دقائق، والكاميرا اختيارية'],
+                ['assistant', 'المساعد الصحي الذكي', 'طبيب عام وأخصائيون'],
+                ['crew', 'طوارئ الطاقم', 'كل أفراد الطاقم يُنبَّهون فورًا'],
+                ['sleep', 'محاكاة النوم', 'أصوات في توقيت موجات النوم العميق'],
+            ],
+            missing: 'لقطة شاشة',
+            why: '<b>بيانات حقيقية وسلوك حقيقي:</b> النموذج يعمل على تسجيلات سريرية حقيقية، ودون إنترنت، بالعربية والإنجليزية، ويجتاز 124 فحصًا آليًا.',
+        },
+        s7: {
+            kicker: 'الأثر والمستقبل', title: 'علامات أبكر. تصرّف أسرع. طاقم أكثر استقلالًا.',
+            imp: [['shield', 'السلامة', 'التغيّرات المستمرة تُكتشف مبكرًا، مع خطوة تالية واضحة.'], ['detect', 'تدخّل أبكر', 'التغيّر البطيء الصامت يصبح اتجاهًا مرئيًا.'], ['crew', 'استقلالية الطاقم', 'القرار على المركبة — ضروري حين تبعد الأرض دقائق.']],
+            road: [['now', 'الآن', 'برنامج نموذج أولي يعمل؛ والسترة وعصابة الرأس ونظام النوم مصمّمة.'], ['next', 'التالي', 'صناعة السترة بحسّاسات موثّقة؛ والتجربة في بيئات محاكاة أرضية مثل HERA من NASA.'], ['later', 'القمر والمريخ', 'نماذج صحية لكل مهمة؛ دراسات نوم في المدار؛ ضبط مع أطباء الرحلات.']],
+            vision: 'أينما ذهب الإنسان مستكشفًا، يجب أن ترافقه رعايته. <span class="accent">هذا هو OrbitCare.</span>', refsT: 'المراجع',
+        },
+    },
+};
+
+// ---------------------------------------------------------------- slides
+let lang = 'en';
+const t = () => T[lang];
+const src = (key) => `<p class="src-line">${(lang === 'ar' ? SRC_AR : SRC)[key]}</p>`;
+const TAG_I = { p: 0, c: 1, r: 2 };
+const tag = (k) => `<span class="tag ${k}">${t().tags[TAG_I[k]]}</span>`;
+const legend = () => `<div class="legend">${['p', 'c', 'r'].map((k, i) => `<span class="tag ${k}">${t().legend[i]}</span>`).join('')}</div>`;
+const head = (n, s) => `<div class="head"><div><p class="kicker"><span class="n">${n}</span>${s.kicker}</p><h2>${s.title}</h2></div>${brand}</div>`;
+const foot = (n, left = '') => `<div class="foot">${left || '<span></span>'}<span>${n} / 7</span></div>`;
+
+function slide1() {
+    const s = t().s1;
+    return `<section class="slide s-title">
+        <svg class="trajectory" viewBox="0 0 400 520" aria-hidden="true">
+            <defs><radialGradient id="g-earth" cx="35%" cy="35%"><stop offset="0" stop-color="#9cc3ff"/><stop offset="1" stop-color="#2f5fd8"/></radialGradient>
+            <radialGradient id="g-mars" cx="35%" cy="35%"><stop offset="0" stop-color="#ffc58a"/><stop offset="1" stop-color="#c8562d"/></radialGradient></defs>
+            <circle cx="300" cy="260" r="215" fill="none" stroke="rgba(143,176,255,0.14)"/>
+            <circle cx="300" cy="260" r="150" fill="none" stroke="rgba(143,176,255,0.1)" stroke-dasharray="3 6"/>
+            <path d="M118 400 C 150 240, 230 140, 340 92" fill="none" stroke="#ffb547" stroke-width="2" stroke-dasharray="7 7" opacity="0.85"/>
+            <circle cx="96" cy="420" r="34" fill="url(#g-earth)"/><circle cx="96" cy="420" r="44" fill="none" stroke="rgba(143,176,255,0.35)"/>
+            <circle cx="356" cy="82" r="22" fill="url(#g-mars)"/>
+            <circle cx="214" cy="190" r="6" fill="#fff"/><circle cx="214" cy="190" r="14" fill="none" stroke="rgba(255,255,255,0.35)"/>
+            <text x="96" y="490" fill="#b7c0e4" font-size="17" text-anchor="middle" font-family="inherit">${s.earth}</text>
+            <text x="356" y="134" fill="#b7c0e4" font-size="17" text-anchor="middle" font-family="inherit">${s.mars}</text>
+            <text x="236" y="272" fill="#ffd08a" font-size="15" font-family="inherit">${s.delay}</text>
+        </svg>
+        <p class="kicker">${s.kicker}</p>
+        <div class="wordmark">${svg('star')}OrbitCare</div>
+        <p class="tagline">${s.tagline}</p>
+        <p class="context">${s.context}</p>
+        <p class="team">${s.team} · <b>${s.teamName}</b></p>
+    </section>`;
+}
+
+function slide2() {
+    const s = t().s2;
+    return `<section class="slide">${head(2, s)}
+        <div class="risks">${s.risks.map(([i, h, n, p, k]) => `<div class="card risk"><h3>${ico(i)}${h}</h3>${n ? `<b>${n}</b>` : ''}<p>${p}</p>${src(k)}</div>`).join('')}</div>
+        ${foot(2)}</section>`;
+}
+
+function slide3() {
+    const s = t().s3;
+    return `<section class="slide">${head(3, s)}
+        <div class="gap">
+            <div><p class="col-title">${s.gapT}</p>
+                <ol class="reasons">${s.gap.map(([h, p, k]) => `<li class="card"><div><h3>${h}</h3><p>${p}</p>${k ? src(k) : ''}</div></li>`).join('')}</ol></div>
+            <div class="card answer"><p class="col-title blue">${s.ansT}</p>
+                <p class="big">${s.big}</p>
+                <div class="loop">${s.loop.map(([h, p], i) => `<div class="node"><i>${i + 1}</i><b>${h}</b><span>${p}</span></div>`).join('')}</div>
+                <p class="loop-back">${s.loopBack}</p>
+                <p class="not">${s.not}</p></div>
+        </div>
+        ${foot(3)}</section>`;
+}
+
+function slide4() {
+    const s = t().s4;
+    const arrow = `<span class="arrow">${svg('arrow')}</span>`;
+    return `<section class="slide">${head(4, s)}
+        <div class="flow">
+            <div class="fcol"><p class="col-title">${s.c1}</p><ul class="list">${s.src.map(([i, h, p]) => `<li class="card">${ico(i)}<div><h4>${h}</h4><p>${p}</p></div></li>`).join('')}</ul></div>
+            ${arrow}
+            <div class="fcol"><p class="col-title">${s.c2}</p><div class="core"><p class="core-name">${svg('star')}OrbitCare</p><p class="core-sub">${s.core}</p>
+                <ol class="pipe">${s.pipe.map(([h, p]) => `<li><div><b>${h}</b><span>${p}</span></div></li>`).join('')}</ol></div></div>
+            ${arrow}
+            <div class="fcol"><p class="col-title">${s.c3}</p><ul class="list">${s.out.map(([i, h, p]) => `<li class="card">${ico(i)}<div><h4>${h}</h4><p>${p}</p></div></li>`).join('')}</ul></div>
+        </div>
+        <p class="data-note">${s.note}</p>
+        ${foot(4, src('physio'))}</section>`;
+}
+
+function slide5() {
+    const s = t().s5;
+    return `<section class="slide">${head(5, s)}
+        <div class="pairs-head"><span>${s.hProb}</span><span>${s.hSol}</span></div>
+        <ul class="pairs">${s.pairs.map(([prob, k, i, name, st, how]) => `
+            <li class="pair"><div class="prob"><b>${prob}</b>${src(k)}</div><span class="to">${svg('arrow')}</span>
+                <div class="sol">${ico(i)}<div><h4>${name} ${tag(st)}</h4><p>${how}</p></div></div></li>`).join('')}</ul>
+        ${foot(5, `<div>${legend()}<div style="margin-top:0.8cqh">${src(s.sleepSrc)}</div></div>`)}</section>`;
+}
+
+function slide6() {
+    const s = t().s6;
+    return `<section class="slide">${head(6, s)}
+        <div class="shots">${s.shots.map(([f, h, p]) => `<figure class="shot"><img src="shots/${f}.png" alt="${h}" data-missing="${s.missing} · ${h}"><figcaption><b>${h}</b><span>${p}</span></figcaption></figure>`).join('')}</div>
+        <p class="why-sim">${s.why}</p>
+        ${foot(6, src('physio'))}</section>`;
+}
+
+function slide7() {
+    const s = t().s7;
+    return `<section class="slide">${head(7, s)}
+        <div class="impact">${s.imp.map(([i, h, p]) => `<div class="card"><h3>${ico(i)}${h}</h3><p>${p}</p></div>`).join('')}</div>
+        <div class="road">${s.road.map(([k, when, p]) => `<div class="step ${k}"><span class="when">${when}</span><p>${p}</p></div>`).join('')}</div>
+        <div class="vision">${svg('star')}<p>${s.vision}</p></div>
+        <div class="refs"><h4>${s.refsT}</h4><ol>${REFS.map((r) => `<li>${r}</li>`).join('')}</ol></div>
+        ${foot(7)}</section>`;
+}
+
+const SLIDES = [slide1, slide2, slide3, slide4, slide5, slide6, slide7];
+
+// ---------------------------------------------------------------- navigation
+const params = new URLSearchParams(location.search);
+const saved = (() => { try { return localStorage.getItem('orbitcare-deck-lang'); } catch { return null; } })();
+lang = (['ar', 'en'].includes(params.get('lang')) ? params.get('lang') : saved) === 'ar' ? 'ar' : 'en';
+let index = Math.min(SLIDES.length - 1, Math.max(0, (parseInt(location.hash.slice(1), 10) || 1) - 1));
+const $ = (sel) => document.querySelector(sel);
+
+// a screenshot that is not there becomes a labelled placeholder
+function fixImages(root) {
+    root.querySelectorAll('img[data-missing]').forEach((img) => {
+        const swap = () => { const d = document.createElement('div'); d.className = 'ph'; d.textContent = img.dataset.missing; img.replaceWith(d); };
+        if (img.complete && img.naturalWidth === 0) swap(); else img.addEventListener('error', swap, { once: true });
+    });
+}
+function render() {
+    document.documentElement.lang = lang;
+    document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
+    $('[data-slides]').innerHTML = SLIDES.map((f) => f()).join('');
+    fixImages($('[data-slides]'));
+    $('[data-lang]').textContent = t().lang;
+    $('[data-full]').textContent = t().full;
+    show(index);
+}
+function show(i) {
+    index = Math.min(SLIDES.length - 1, Math.max(0, i));
+    document.querySelectorAll('[data-slides] .slide').forEach((el, k) => { el.classList.toggle('is-active', k === index); el.setAttribute('aria-hidden', String(k !== index)); });
+    $('[data-count]').textContent = `${index + 1} / ${SLIDES.length}`;
+    $('[data-progress]').style.width = `${((index + 1) / SLIDES.length) * 100}%`;
+    history.replaceState(null, '', `${location.search}#${index + 1}`);
+}
+const next = () => show(index + 1);
+const prev = () => show(index - 1);
+function toggleLang() { lang = lang === 'ar' ? 'en' : 'ar'; try { localStorage.setItem('orbitcare-deck-lang', lang); } catch { /* not remembered */ } render(); }
+function toggleFull() { if (document.fullscreenElement) document.exitFullscreen(); else document.documentElement.requestFullscreen?.(); }
+$('[data-next]').addEventListener('click', next);
+$('[data-prev]').addEventListener('click', prev);
+$('[data-lang]').addEventListener('click', toggleLang);
+$('[data-full]').addEventListener('click', toggleFull);
+document.addEventListener('keydown', (e) => {
+    if (e.altKey || e.ctrlKey || e.metaKey) return;
+    const rtl = lang === 'ar', k = e.key;
+    if (k === ' ' || k === 'PageDown' || k === 'ArrowDown' || k === (rtl ? 'ArrowLeft' : 'ArrowRight')) { e.preventDefault(); next(); }
+    else if (k === 'PageUp' || k === 'ArrowUp' || k === (rtl ? 'ArrowRight' : 'ArrowLeft')) { e.preventDefault(); prev(); }
+    else if (k === 'Home') show(0);
+    else if (k === 'End') show(SLIDES.length - 1);
+    else if (k === 'l' || k === 'L') toggleLang();
+    else if (k === 'f' || k === 'F') toggleFull();
+});
+$('[data-stage]').addEventListener('click', (e) => { if (!e.target.closest('a')) next(); });
+let idleTimer;
+const wake = () => { document.body.classList.remove('idle'); clearTimeout(idleTimer); idleTimer = setTimeout(() => document.body.classList.add('idle'), 2500); };
+document.addEventListener('mousemove', wake);
+wake();
+
+if (params.has('print')) {
+    document.documentElement.lang = lang;
+    document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
+    document.body.classList.add('print');
+    document.body.insertAdjacentHTML('beforeend', `<div class="print-pages">${SLIDES.map((f) => `<div class="page"><div class="stage">${f().replace('class="slide', 'class="slide is-active')}</div></div>`).join('')}</div>`);
+    fixImages($('.print-pages'));
+    const page = document.createElement('style');
+    page.textContent = '@page { size: 1600px 900px; margin: 0; }';
+    document.head.append(page);
+} else {
+    render();
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,658 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OrbitCare Pitch</title>
+<!-- OrbitCare pitch for the NASA Space Apps 2026 judges, English + Arabic.
+     Story: a night on the way to Mars → NASA's challenge → the problem in numbers → OrbitCare → each part of the
+     system (the problem it solves, how it works, the evidence) → why it can be trusted → live demo → impact →
+     back to the same night, now with OrbitCare. Speaker notes are a full script, plus ready answers on the last slide.
+     Keys: → / ← / Space / PageDown / PageUp (clickers) · N notes · L language · F full screen · Home / End.
+     ?lang=ar|en · ?notes · #5 opens slide 5. Works offline: the fonts come from this project. -->
+<link rel="stylesheet" href="../../assets/css/fonts.css">
+<style>
+:root {
+    --space: #0c1230; --navy: #1b2350; --ink: #f4f6ff; --soft: #b9c2e6; --muted: #8590bd;
+    --accent: #5b8cff; --accent-2: #8fb0ff; --warm: #ffb547; --warm-2: #ffd08a; --line: rgba(185, 194, 230, 0.18);
+    --card: rgba(255, 255, 255, 0.055);
+    --font: "Lexend", "IBM Plex Sans Arabic", system-ui, sans-serif;
+}
+[lang="ar"] { --font: "IBM Plex Sans Arabic", "Lexend", system-ui, sans-serif; }
+* { box-sizing: border-box; margin: 0; }
+html, body { height: 100%; }
+body { overflow: hidden; background: #070b1f; color: var(--ink); font-family: var(--font); }
+button, a { font: inherit; }
+
+/* ---------- 16:9 stage scaled to the window; sizes in cqw/cqh so each slide scales as one picture */
+.viewport { position: fixed; inset: 0; display: grid; place-items: center; }
+body.notes-open .viewport { bottom: 14rem; }
+.stage {
+    position: relative; width: min(100vw, calc(100vh * 16 / 9)); aspect-ratio: 16 / 9; overflow: hidden;
+    container-type: size;
+    background:
+        radial-gradient(1.2px 1.2px at 12% 18%, #fff8 50%, transparent 51%),
+        radial-gradient(1px 1px at 78% 12%, #fff6 50%, transparent 51%),
+        radial-gradient(1.4px 1.4px at 64% 72%, #fff7 50%, transparent 51%),
+        radial-gradient(1px 1px at 30% 84%, #fff5 50%, transparent 51%),
+        radial-gradient(1.2px 1.2px at 90% 58%, #fff6 50%, transparent 51%),
+        radial-gradient(1px 1px at 46% 8%, #fff5 50%, transparent 51%),
+        radial-gradient(1px 1px at 6% 62%, #fff5 50%, transparent 51%),
+        radial-gradient(ellipse 70% 60% at 85% 110%, rgba(91, 140, 255, 0.22), transparent 70%),
+        radial-gradient(ellipse 60% 50% at 0% -10%, rgba(143, 176, 255, 0.12), transparent 70%),
+        linear-gradient(160deg, var(--navy) 0%, var(--space) 70%);
+}
+body.notes-open .stage { width: min(100vw, calc((100vh - 14rem) * 16 / 9)); }
+
+.slide {
+    position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: center;
+    padding: 9cqh 7cqw 8cqh; opacity: 0; visibility: hidden; transform: translateY(1.2cqh);
+    transition: opacity 0.45s ease, transform 0.45s ease, visibility 0s linear 0.45s;
+}
+.slide.is-active { opacity: 1; visibility: visible; transform: none; transition: opacity 0.45s ease, transform 0.45s ease; }
+
+.brand { position: absolute; top: 4.5cqh; inset-inline-start: 7cqw; display: flex; align-items: center; gap: 0.7cqw; font-size: 1.5cqw; font-weight: 600; color: var(--soft); }
+.brand svg { width: 1.8cqw; height: 1.8cqw; color: var(--accent); }
+.kicker { font-size: 1.3cqw; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase; color: var(--accent-2); }
+[lang="ar"] .kicker { letter-spacing: 0; font-size: 1.6cqw; text-transform: none; }
+h1, h2 { font-weight: 600; line-height: 1.15; color: var(--ink); text-wrap: balance; }
+h1 { margin-top: 1.4cqh; font-size: 4.6cqw; max-width: 74cqw; }
+h2 { margin-top: 1.2cqh; font-size: 3.1cqw; max-width: 84cqw; }
+[lang="ar"] h1 { font-size: 4.3cqw; line-height: 1.3; }
+[lang="ar"] h2 { font-size: 2.9cqw; line-height: 1.35; }
+.lead { margin-top: 3.4cqh; font-size: 1.9cqw; line-height: 1.5; color: var(--soft); max-width: 64cqw; }
+.accent { color: var(--accent-2); }
+
+/* "the problem this part solves" */
+.why { margin-top: 2.6cqh; max-width: 82cqw; padding-inline-start: 1.3cqw; border-inline-start: 0.3cqw solid var(--warm); font-size: 1.75cqw; line-height: 1.45; color: var(--warm-2); }
+
+/* cards (feature parts, challenge, impact, trust) */
+.cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.6cqw; margin-top: 4cqh; }
+.card { padding: 2.8cqh 1.8cqw; border: 1px solid var(--line); border-radius: 1.4cqw; background: var(--card); }
+.card h3 { display: flex; align-items: center; gap: 0.8cqw; font-size: 1.8cqw; font-weight: 600; color: var(--ink); }
+.card h3::before { content: ""; flex: none; width: 0.75cqw; height: 0.75cqw; border-radius: 50%; background: var(--accent); box-shadow: 0 0 1cqw var(--accent); }
+.card p { margin-top: 1.3cqh; font-size: 1.42cqw; line-height: 1.5; color: var(--soft); }
+.cards.is-check .card h3 { color: var(--accent-2); }
+.cards.is-check .card h3::before { content: "✓"; width: auto; height: auto; background: none; box-shadow: none; color: var(--warm); font-size: 1.8cqw; }
+.cards.is-6 { grid-template-rows: auto auto; gap: 1.4cqw; }
+.cards.is-6 .card { display: flex; gap: 1.3cqw; padding: 2.4cqh 1.6cqw; }
+.cards.is-6 .card h3::before { display: none; }
+.cards.is-6 .card p { margin-top: 0.8cqh; font-size: 1.32cqw; }
+.quote { margin-top: 2.6cqh; font-size: 1.65cqw; line-height: 1.5; color: var(--soft); max-width: 84cqw; }
+.quote b { color: var(--ink); font-weight: 500; }
+
+/* evidence strip */
+.proof { display: flex; align-items: center; gap: 1.2cqw; margin-top: 3.2cqh; padding: 1.7cqh 1.8cqw; border: 1px solid rgba(255, 181, 71, 0.3); border-radius: 1.4cqw; background: rgba(255, 181, 71, 0.07); font-size: 1.45cqw; line-height: 1.45; color: var(--ink); }
+.proof .icon-box { flex: none; width: 3.4cqw; height: 3.4cqw; background: rgba(255, 181, 71, 0.16); color: var(--warm); }
+.proof .icon-box svg { width: 2cqw; height: 2cqw; }
+
+.icon-box { display: grid; place-items: center; flex: none; width: 4.4cqw; height: 4.4cqw; border-radius: 1.1cqw; background: rgba(91, 140, 255, 0.16); color: var(--accent-2); }
+.icon-box svg { width: 2.5cqw; height: 2.5cqw; }
+
+/* stats (the problem in numbers, the sleep science) */
+.stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2cqw; margin-top: 4.5cqh; }
+.stat { padding: 3cqh 2cqw; border: 1px solid var(--line); border-radius: 1.4cqw; background: var(--card); }
+.stat b { display: block; font-size: 4.4cqw; font-weight: 600; color: var(--warm); font-variant-numeric: tabular-nums; }
+.stat > span { display: block; margin-top: 1cqh; font-size: 1.5cqw; line-height: 1.45; color: var(--soft); }
+.hazards { margin-top: 3.6cqh; font-size: 1.7cqw; line-height: 1.5; color: var(--soft); }
+.cite { position: absolute; bottom: 3.6cqh; inset-inline-start: 7cqw; max-width: 60cqw; font-size: 1.02cqw; line-height: 1.5; color: var(--muted); }
+
+/* flow (solution loop, sleep headband) */
+.flow { display: grid; align-items: stretch; gap: 1.4cqw; margin-top: 4.5cqh; }
+.step { padding: 3cqh 1.7cqw; border: 1px solid var(--line); border-radius: 1.4cqw; background: var(--card); }
+.step h3 { margin-top: 2.2cqh; font-size: 2cqw; font-weight: 600; }
+.step p { margin-top: 1.1cqh; font-size: 1.42cqw; line-height: 1.5; color: var(--soft); }
+.step-num { float: inline-end; font-size: 1.3cqw; font-weight: 600; color: var(--muted); }
+
+/* demo */
+.demo { align-items: center; text-align: center; }
+.demo h1 { max-width: none; font-size: 6.6cqw; }
+.live-dot { display: inline-flex; align-items: center; gap: 0.8cqw; padding: 0.8cqh 1.6cqw; border-radius: 999px; background: rgba(255, 92, 110, 0.14); color: #ff8592; font-size: 1.5cqw; font-weight: 600; letter-spacing: 0.14em; }
+[lang="ar"] .live-dot { letter-spacing: 0; }
+.live-dot::before { content: ""; width: 1cqw; height: 1cqw; border-radius: 50%; background: #ff5c6e; animation: blink 1.4s ease-in-out infinite; }
+@keyframes blink { 50% { opacity: 0.25; } }
+.demo-list { display: flex; flex-wrap: wrap; justify-content: center; gap: 1cqw; margin-top: 4cqh; padding: 0; list-style: none; }
+.demo-list li { padding: 1cqh 1.4cqw; border: 1px solid var(--line); border-radius: 999px; background: var(--card); font-size: 1.4cqw; color: var(--soft); }
+.open-app { margin-top: 4.5cqh; display: inline-flex; align-items: center; gap: 1cqw; padding: 1.8cqh 3cqw; border-radius: 999px; background: var(--accent); color: #fff; font-size: 1.8cqw; font-weight: 600; text-decoration: none; box-shadow: 0 1cqh 4cqh rgba(91, 140, 255, 0.35); }
+.open-app:hover { background: #4a7bf0; }
+
+/* opening + closing: the same night, before and after */
+.story .kicker { color: var(--warm); }
+.orbit { position: absolute; inset-inline-end: -14cqw; top: 50%; width: 62cqw; aspect-ratio: 1; transform: translateY(-50%); border-radius: 50%; border: 1px solid rgba(143, 176, 255, 0.22); pointer-events: none; }
+.orbit::before { content: ""; position: absolute; inset: 9cqw; border-radius: 50%; border: 1px dashed rgba(143, 176, 255, 0.18); }
+.orbit::after { content: ""; position: absolute; top: 8%; left: 22.8%; translate: -50% -50%; width: 1.8cqw; height: 1.8cqw; border-radius: 50%; background: var(--accent-2); box-shadow: 0 0 3cqw var(--accent); }
+[dir="rtl"] .orbit::after { left: auto; right: 22.8%; translate: 50% -50%; }
+.big-star { position: absolute; inset-inline-end: 9cqw; top: 50%; width: 11cqw; height: 11cqw; transform: translateY(-50%); color: var(--accent); filter: drop-shadow(0 0 3cqw rgba(91, 140, 255, 0.6)); }
+.closing h1 { max-width: 66cqw; }
+.closing .lead { max-width: 60cqw; }
+
+/* ---------- controls (fade out while the mouse rests) */
+.progress { position: absolute; left: 0; bottom: 0; height: 0.5cqh; background: var(--accent); transition: width 0.45s ease; }
+[dir="rtl"] .progress { left: auto; right: 0; }
+.controls { position: fixed; bottom: 1rem; inset-inline-end: 1rem; z-index: 5; display: flex; align-items: center; gap: 0.35rem; padding: 0.35rem; border-radius: 999px; background: rgba(12, 18, 48, 0.82); border: 1px solid var(--line); backdrop-filter: blur(6px); transition: opacity 0.3s ease; }
+body.idle .controls { opacity: 0; }
+body.notes-open .controls { bottom: 15rem; }
+.ctrl { min-width: 2.4rem; height: 2.4rem; padding: 0 0.8rem; border: 0; border-radius: 999px; background: transparent; color: var(--soft); font-size: 0.85rem; cursor: pointer; }
+.ctrl:hover, .ctrl[aria-pressed="true"] { background: rgba(91, 140, 255, 0.2); color: #fff; }
+.ctrl svg { width: 1.1rem; height: 1.1rem; vertical-align: middle; }
+[dir="rtl"] .ctrl[data-prev] svg, [dir="rtl"] .ctrl[data-next] svg { transform: scaleX(-1); }
+.count { direction: ltr; unicode-bidi: isolate; min-width: 3.4rem; text-align: center; font-size: 0.85rem; color: var(--soft); font-variant-numeric: tabular-nums; }
+
+.notes { position: fixed; left: 0; right: 0; bottom: 0; height: 14rem; display: none; gap: 1.5rem; padding: 1rem 1.5rem; overflow-y: auto; background: #0b1029; border-top: 1px solid var(--line); }
+body.notes-open .notes { display: flex; }
+.notes h4 { flex: none; width: 9rem; font-size: 0.8rem; font-weight: 600; color: var(--accent-2); text-transform: uppercase; letter-spacing: 0.08em; }
+[lang="ar"] .notes h4 { letter-spacing: 0; font-size: 0.9rem; }
+.notes p, .notes li { font-size: 1.05rem; line-height: 1.7; color: var(--ink); }
+.notes p + p, .notes p + ol, .notes ol + p { margin-top: 0.5rem; }
+.notes ol { padding-inline-start: 1.2rem; display: grid; gap: 0.15rem; }
+.notes strong { color: var(--warm-2); font-weight: 600; }
+
+/* ---------- ?print (slides, one per page) and ?print=notes (slide + speaker script, A4) — used for the PDF copies */
+body.print { overflow: visible; height: auto; }
+body.print .viewport, body.print .controls, body.print .notes { display: none; }
+.print-pages .page { break-after: page; overflow: hidden; }
+.print-pages .page:last-child { break-after: auto; }
+.print-pages .stage { width: 100%; }
+.print-pages .slide { opacity: 1; visibility: visible; transform: none; transition: none; }
+.print-pages .page--slide { width: 1600px; height: 900px; }
+.print-pages .page--notes { width: 210mm; height: 297mm; padding: 12mm; background: #fff; color: #1b2340; }
+.page-notes { margin-top: 7mm; font-size: 11.5pt; line-height: 1.65; }
+.page-notes h4 { margin-bottom: 3mm; font-size: 10pt; font-weight: 600; color: #2f5fd8; }
+.page-notes strong { color: #1b2350; }
+.page-notes p + p, .page-notes p + ol, .page-notes ol + p { margin-top: 2.5mm; }
+.page-notes ol { padding-inline-start: 6mm; }
+@media print { * { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
+
+@media (prefers-reduced-motion: reduce) { .slide, .progress { transition: none; } .live-dot::before { animation: none; } }
+@media (max-width: 640px) { .notes { flex-direction: column; gap: 0.5rem; } .notes h4 { width: auto; } }
+</style>
+</head>
+<body>
+<div class="viewport">
+    <main class="stage" data-stage aria-live="polite">
+        <div class="brand"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 0C12.7 7.6 16.4 11.3 24 12C16.4 12.7 12.7 16.4 12 24C11.3 16.4 7.6 12.7 0 12C7.6 11.3 11.3 7.6 12 0Z" fill="currentColor"/></svg>OrbitCare</div>
+        <div data-slides></div>
+        <div class="progress" data-progress></div>
+    </main>
+</div>
+
+<nav class="controls" aria-label="Slides">
+    <button class="ctrl" type="button" data-prev><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg></button>
+    <span class="count" data-count></span>
+    <button class="ctrl" type="button" data-next><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></button>
+    <button class="ctrl" type="button" data-notes aria-pressed="false"></button>
+    <button class="ctrl" type="button" data-lang></button>
+    <button class="ctrl" type="button" data-full></button>
+</nav>
+<aside class="notes" data-notes-panel><h4 data-notes-title></h4><div data-notes-body></div></aside>
+
+<script>
+// ---------------------------------------------------------------- icons
+const ICON = {
+    monitor: '<path d="M3 12h4l2-5 3.5 10 2.5-7 1.5 2H21"/>',
+    understand: '<path d="M4 20h16M6.5 20v-6M10.5 20V9M14.5 20v-8M18.5 20V5"/>',
+    detect: '<circle cx="11" cy="11" r="6.5"/><path d="M20.5 20.5l-4.8-4.8"/><path d="M8 11h1.5l1-2 1.5 4 1-2H15"/>',
+    act: '<path d="M6 16v-5a6 6 0 0 1 12 0v5l1.5 2h-15z"/><path d="M10 20.5a2 2 0 0 0 4 0"/>',
+    brain: '<path d="M9 4.5a3 3 0 0 0-3 3 3 3 0 0 0-1.5 5.3A3 3 0 0 0 7 17.5a2.5 2.5 0 0 0 5 .5V5.5a2 2 0 0 0-3-1z"/><path d="M15 4.5a3 3 0 0 1 3 3 3 3 0 0 1 1.5 5.3 3 3 0 0 1-2.5 4.7 2.5 2.5 0 0 1-5 .5"/>',
+    wave: '<path d="M2.5 12c1.6-5.5 3.2-5.5 4.8 0s3.2 5.5 4.8 0 3.2-5.5 4.8 0 3.2 5.5 4.6 0"/>',
+    sound: '<path d="M4 9.5h3.5L12 6v12l-4.5-3.5H4z"/><path d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11"/>',
+    adapt: '<path d="M5 4v16M12 4v16M19 4v16"/><circle cx="5" cy="14" r="2"/><circle cx="12" cy="8" r="2"/><circle cx="19" cy="15" r="2"/>',
+    light: '<path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3z"/>',
+    book: '<path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v15H6.5A2.5 2.5 0 0 0 4 20.5z"/><path d="M4 20.5A2.5 2.5 0 0 0 6.5 23H20v-5"/>',
+    data: '<ellipse cx="12" cy="6" rx="7" ry="2.5"/><path d="M5 6v12c0 1.4 3.1 2.5 7 2.5s7-1.1 7-2.5V6M5 12c0 1.4 3.1 2.5 7 2.5s7-1.1 7-2.5"/>',
+    lock: '<rect x="5" y="10.5" width="14" height="10" rx="2.5"/><path d="M8.5 10.5V7.5a3.5 3.5 0 0 1 7 0v3"/>',
+    offline: '<path d="M2.5 8.5a14 14 0 0 1 19 0M5.5 12a9.5 9.5 0 0 1 13 0M8.8 15.4a5 5 0 0 1 6.4 0"/><circle cx="12" cy="19" r="1.2"/>',
+    lang: '<circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5c2.5 2.4 3.6 5.2 3.6 8.5S14.5 18.1 12 20.5C9.5 18.1 8.4 15.3 8.4 12S9.5 5.9 12 3.5z"/>',
+    check: '<path d="M5 12.5l4.5 4.5L19 7.5"/>',
+    star: '<path d="M12 0C12.7 7.6 16.4 11.3 24 12C16.4 12.7 12.7 16.4 12 24C11.3 16.4 7.6 12.7 0 12C7.6 11.3 11.3 7.6 12 0Z" fill="currentColor" stroke="none"/>',
+};
+const svg = (name) => `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${ICON[name]}</svg>`;
+
+// ---------------------------------------------------------------- content (English / Arabic)
+// Every figure is sourced (verified for this project):
+// · Mars communication delay up to ~20 min one way; bone loss 1–1.5 %/month; ISS exercise ~1.5 h/day — NASA Human Research Program.
+// · ~6 h sleep, 75 % of ISS crew used sleep medication — Barger et al., Lancet Neurology 2014.
+// · PVT-B 3 min, lapse ≥ 355 ms — Basner, Mollicone & Dinges 2011; ISS Reaction Self Test since 2009 — NASA Spinoff 2013.
+// · Samn-Perelli fatigue scale; PHQ-4 — see docs/DATA_PROVENANCE.md.
+// · Sleep: +16 % slow-wave activity in young adults with timed sounds (2018, PubMed 30215604); mistimed sounds −30 %
+//   slow-wave sleep (Fehér 2023); Dreem dry-EEG headband worn on the ISS (DREAMS, 2023);
+//   HERA lighting: −96 % brightness, warmer, in the 3 h before bed (Rahman et al. 2022).
+const UI = {
+    en: { notes: 'Notes', notes_title: 'Speaker script', lang: 'العربية', full: 'Full screen', open: 'Open OrbitCare', prev: 'Previous slide', next: 'Next slide' },
+    ar: { notes: 'الملاحظات', notes_title: 'ماذا أقول', lang: 'English', full: 'ملء الشاشة', open: 'افتح OrbitCare', prev: 'الشريحة السابقة', next: 'الشريحة التالية' },
+};
+
+const SLIDES = [
+    // 1 — a story the judges can picture (hook)
+    {
+        layout: 'story', cls: 'story', deco: 'orbit',
+        en: {
+            kicker: 'Day 140 · halfway to Mars · 03:00',
+            title: 'An astronaut’s heart rate starts climbing. Earth is <span class="accent">20 minutes</span> away.',
+            lead: 'Who notices? Who decides what to do — right now?',
+            note: '<p>“Imagine day 140 of a mission to Mars. It’s three in the morning. One astronaut’s heart rate starts climbing, and their oxygen begins to drop.</p><p>On the International Space Station, a flight surgeon on Earth could react quickly. But on the way to Mars, a single message can take up to <strong>20 minutes — one way</strong>.</p><p>So who notices? And who decides what to do — right now? That is the question our project answers. We are [team name], and this is <strong>OrbitCare</strong>.”</p><p><em>Pause for two seconds after the question.</em></p>',
+        },
+        ar: {
+            kicker: 'اليوم 140 · منتصف الطريق إلى المريخ · 3:00 فجرًا',
+            title: 'نبض أحد الرواد يبدأ بالارتفاع. والأرض على بُعد <span class="accent">20 دقيقة</span>.',
+            lead: 'مَن سيلاحظ؟ ومَن سيقرّر ماذا نفعل — الآن؟',
+            note: '<p>«تخيّلوا اليوم 140 من رحلة إلى المريخ. الساعة الثالثة فجرًا. نبض أحد الرواد يبدأ بالارتفاع، والأكسجين في دمه يبدأ بالانخفاض.</p><p>على محطة الفضاء الدولية، يستطيع طبيب على الأرض أن يتدخّل بسرعة. لكن في الطريق إلى المريخ، قد تحتاج رسالة واحدة حتى <strong>20 دقيقة — في اتجاه واحد فقط</strong>.</p><p>فمَن سيلاحظ؟ ومَن سيقرّر ماذا نفعل — الآن؟ هذا هو السؤال الذي يجيب عنه مشروعنا. نحن فريق [اسم الفريق]، وهذا <strong>OrbitCare</strong>.»</p><p><em>توقّفي ثانيتين بعد السؤال.</em></p>',
+        },
+    },
+    // 2 — NASA's own challenge, answered point by point (relevance)
+    {
+        layout: 'challenge',
+        en: {
+            kicker: 'The challenge',
+            title: 'NASA asked for software that lets astronauts <span class="accent">understand and act on their own health</span>',
+            quote: 'Long missions expose the crew to <b>radiation, isolation, altered gravity and a closed environment</b> — leading to bone loss, immune changes, heart problems and behavioral health issues.',
+            cards: [['Gather health indicators', 'Vest and headband sensors, a one-minute daily check-in, and a 3-minute alertness test'], ['Evaluate their status', 'A clear green / yellow / red status, trends over time, and an AI assistant that explains'], ['Act on it', 'Alerts with the next step, a crew emergency response, and support for deep sleep']],
+            note: '<p>“NASA’s challenge was clear. Long missions expose astronauts to radiation, isolation, altered gravity and a closed environment. That leads to bone loss, immune changes, heart problems and behavioral health issues.</p><p>NASA asked for software that <strong>gathers</strong> health indicators and lets astronauts <strong>evaluate</strong> and <strong>act on</strong> their own health. We built OrbitCare point by point around those three words — and on this slide you can see exactly where each one lives in our system.”</p>',
+        },
+        ar: {
+            kicker: 'التحدي',
+            title: 'طلبت NASA برنامجًا يجعل الرائد <span class="accent">يفهم صحته ويتصرّف بناءً عليها</span>',
+            quote: 'المهمات الطويلة تعرّض الطاقم <b>للإشعاع والعزلة والجاذبية المختلفة والبيئة المغلقة</b> — وهذا يؤدي إلى فقدان العظام، وتغيّرات المناعة، ومشاكل القلب، ومشاكل الصحة النفسية والسلوكية.',
+            cards: [['جمع المؤشرات الصحية', 'حسّاسات في السترة وعصابة الرأس، وتسجيل يومي في دقيقة، واختبار يقظة في 3 دقائق'], ['تقييم الحالة', 'حالة واضحة بالأخضر والأصفر والأحمر، واتجاهات عبر الزمن، ومساعد ذكي يشرح'], ['التصرّف', 'تنبيهات مع الخطوة التالية، واستجابة الطاقم للطوارئ، ودعم للنوم العميق']],
+            note: '<p>«تحدي NASA كان واضحًا: المهمات الطويلة تعرّض الرواد للإشعاع والعزلة والجاذبية المختلفة والبيئة المغلقة، وهذا يؤدي إلى فقدان العظام وتغيّرات المناعة ومشاكل القلب والصحة النفسية.</p><p>طلبت NASA برنامجًا <strong>يجمع</strong> المؤشرات الصحية، ويجعل الرائد <strong>يقيّم</strong> حالته <strong>ويتصرّف</strong> بناءً عليها. بنينا OrbitCare نقطةً نقطة حول هذه الكلمات الثلاث — وفي هذه الشريحة ترون أين تعيش كل واحدة منها في نظامنا.»</p>',
+        },
+    },
+    // 3 — the problem in numbers (credibility through sources)
+    {
+        layout: 'stats',
+        en: {
+            kicker: 'The problem',
+            title: 'The body changes silently — and the risks add up',
+            stats: [['1–1.5%', 'of bone mass can be lost per month in space'], ['~6 h', 'average sleep per night on the ISS'], ['75%', 'of ISS crew members used sleep medication']],
+            hazards: 'And on the way to Mars, help from Earth can be up to 20 minutes away — each way.',
+            cite: 'Sources: NASA Human Research Program · Barger et al., Lancet Neurology (2014)',
+            note: '<p>“These are not guesses — they come from NASA and published research. In space, bones can lose 1 to 1.5 percent of their mass every month. Astronauts on the ISS sleep about six hours a night, and three out of four used sleep medication.</p><p>Many of these changes are <strong>silent at first</strong>. You don’t feel your bones getting weaker, or your reactions getting slower. And the farther we go, the less the crew can rely on Earth to catch them in time.”</p>',
+        },
+        ar: {
+            kicker: 'المشكلة',
+            title: 'الجسم يتغيّر بصمت — والمخاطر تتراكم',
+            stats: [['<span dir="ltr">1–1.5%</span>', 'من كتلة العظام قد تُفقد كل شهر في الفضاء'], ['6 ساعات', 'تقريبًا، متوسط النوم في الليلة على محطة الفضاء'], ['<span dir="ltr">75%</span>', 'من رواد المحطة استخدموا أدوية للنوم']],
+            hazards: 'وفي الطريق إلى المريخ، قد تبعد المساعدة من الأرض حتى 20 دقيقة — في كل اتجاه.',
+            cite: 'المصادر: برنامج NASA لأبحاث صحة الإنسان · Barger وآخرون، <span dir="ltr">Lancet Neurology (2014)</span>',
+            note: '<p>«هذه ليست تخمينات — بل من NASA ومن أبحاث منشورة. في الفضاء، قد تفقد العظام من 1 إلى 1.5% من كتلتها كل شهر. والرواد على المحطة ينامون نحو 6 ساعات في الليلة، وثلاثة من كل أربعة استخدموا أدوية للنوم.</p><p>كثير من هذه التغيّرات <strong>تبدأ بصمت</strong>: لا تشعر بأن عظامك تضعف، ولا بأن ردّة فعلك تتباطأ. وكلما ابتعدنا، قلّت قدرة الأرض على اكتشافها في الوقت المناسب.»</p>',
+        },
+    },
+    // 4 — the answer in one sentence + the loop
+    {
+        layout: 'flow',
+        en: {
+            kicker: 'Our solution',
+            title: 'OrbitCare: a health companion that lives <span class="accent">on board</span>',
+            steps: [['monitor', 'Monitor', 'Wearable sensors and short check-ins, all day'], ['understand', 'Understand', 'Clear status, compared with the astronaut’s own normal'], ['detect', 'Detect early', 'Rules that react to changes that last — not to noise'], ['act', 'Act', 'Guidance, crew alerts and emergency support']],
+            proof: ['check', 'Not a replacement for a doctor — it gives every astronaut the information and the next step, even with no link to Earth.'],
+            note: '<p>“Our answer is OrbitCare — a health companion that lives on board, not on Earth.</p><p>It works in four steps. It <strong>monitors</strong> the body all day. It helps the astronaut <strong>understand</strong> what the numbers mean for them. It <strong>detects</strong> changes early — but only changes that last, so it doesn’t panic over noise. And then it helps them <strong>act</strong>.</p><p>We want to be clear: OrbitCare does not replace a doctor. It makes sure that when the doctor is 20 minutes away, the crew is never left without information or a next step.”</p>',
+        },
+        ar: {
+            kicker: 'حلّنا',
+            title: 'OrbitCare: رفيق صحي يعيش <span class="accent">على متن المركبة</span>',
+            steps: [['monitor', 'نراقب', 'حسّاسات يرتديها الرائد وتسجيلات قصيرة، طوال اليوم'], ['understand', 'نفهم', 'حالة واضحة، مقارنةً بالمعدل الطبيعي للرائد نفسه'], ['detect', 'نكتشف مبكرًا', 'قواعد تتفاعل مع التغيّر المستمر — لا مع التشويش'], ['act', 'نتصرّف', 'إرشاد، وتنبيه الطاقم، ودعم في الطوارئ']],
+            proof: ['check', 'لا يحلّ محل الطبيب — بل يعطي كل رائد المعلومة والخطوة التالية، حتى دون أي اتصال بالأرض.'],
+            note: '<p>«جوابنا هو OrbitCare — رفيق صحي يعيش على متن المركبة، لا على الأرض.</p><p>يعمل في أربع خطوات: <strong>يراقب</strong> الجسم طوال اليوم، ويساعد الرائد على <strong>فهم</strong> ما تعنيه الأرقام بالنسبة له، <strong>ويكتشف</strong> التغيّر مبكرًا — لكن فقط التغيّر المستمر، حتى لا يفزع من أي تشويش، ثم يساعده على <strong>التصرّف</strong>.</p><p>ونريد أن نكون واضحين: OrbitCare لا يحلّ محل الطبيب. هو يضمن أنه حين يكون الطبيب على بُعد 20 دقيقة، لا يبقى الطاقم دون معلومة أو خطوة تالية.»</p>',
+        },
+    },
+    // 5 — the wearable
+    {
+        layout: 'feature',
+        en: {
+            kicker: 'The hardware concept',
+            title: 'A vest and a headband — each sensor where the body speaks clearest',
+            why: 'Astronauts can’t be wired to a hospital monitor. The sensors have to disappear into what they wear.',
+            cards: [['Chest', 'Three ECG electrodes for the heart, a breathing band around the ribs, and a skin-temperature sensor'], ['Head', 'A forehead sensor for oxygen and pulse, a skin-response sensor, and EEG for sleep'], ['Body & mission', 'A motion sensor, a personal radiation dosimeter, an arm blood-pressure cuff, and a muscle sensor for exercise']],
+            proof: ['book', 'Placement follows physiology and Astroskin, a smart shirt + headband. Every sensor we rejected is shown with the reason — for example, step counting means nothing in orbit.'],
+            note: '<p>“Here is the hardware concept. Astronauts can’t be wired to a hospital monitor, so the sensors must disappear into what they wear: a vest and a headband.</p><p>Every sensor sits where the body gives the clearest signal: three ECG electrodes on the chest for the heart, a breathing band around the ribs, a forehead sensor for oxygen and pulse, plus temperature, motion, a personal radiation dosimeter and more.</p><p>We were just as careful about what we <strong>left out</strong>. For example, counting steps means nothing when you float. In the demo you’ll see this vest in 3D — with real signals running on each sensor.”</p>',
+        },
+        ar: {
+            kicker: 'تصميم الجهاز',
+            title: 'سترة وعصابة رأس — كل حسّاس حيث يتكلّم الجسم بوضوح',
+            why: 'لا يمكن ربط الرائد بجهاز مراقبة مثل المستشفى. يجب أن تختفي الحسّاسات داخل ما يرتديه.',
+            cards: [['الصدر', 'ثلاثة أقطاب لتخطيط القلب، وحزام تنفس حول الأضلاع، وحسّاس لحرارة الجلد'], ['الرأس', 'حسّاس على الجبهة للأكسجين والنبض، وحسّاس لاستجابة الجلد، وEEG للنوم'], ['الجسم والمهمة', 'حسّاس للحركة، ومقياس شخصي لجرعة الإشعاع، وسوار لضغط الدم على الذراع، وحسّاس للعضلات أثناء التمرين']],
+            proof: ['book', 'أماكن الحسّاسات مبنية على وظائف الجسم وعلى Astroskin (قميص ذكي مع عصابة رأس). وكل حسّاس استبعدناه معروض مع السبب — مثلًا عدّ الخطوات لا معنى له في المدار.'],
+            note: '<p>«هذا تصميم الجهاز. لا يمكن ربط الرائد بجهاز مراقبة مثل المستشفى، لذلك يجب أن تختفي الحسّاسات داخل ما يرتديه: سترة وعصابة رأس.</p><p>كل حسّاس في المكان الذي يعطي فيه الجسم أوضح إشارة: ثلاثة أقطاب على الصدر للقلب، وحزام تنفس حول الأضلاع، وحسّاس على الجبهة للأكسجين والنبض، إضافةً إلى الحرارة والحركة ومقياس شخصي للإشعاع وغيرها.</p><p>واهتممنا بالقدر نفسه بما <strong>استبعدناه</strong>: مثلًا عدّ الخطوات لا معنى له حين تطفو. وفي العرض الحي سترون هذه السترة ثلاثية الأبعاد — مع إشارات حقيقية على كل حسّاس.»</p>',
+        },
+    },
+    // 6 — live vitals
+    {
+        layout: 'feature',
+        en: {
+            kicker: 'Feature 1 · Live vital signs',
+            title: 'See the body in real time — and catch change early',
+            why: 'One strange number means little. A change that lasts means a lot.',
+            cards: [['4 vital signs, live', 'Heart rate, oxygen (SpO₂), pulse and breathing — each shown on the sensor that measures it, with its real waveform'], ['Green · yellow · red', 'Clear ranges. An alert fires only when a change lasts 10 seconds — fewer false alarms'], ['Alerts that escalate', 'Yellow becomes red if it keeps getting worse — and every value can be traced back to its source']],
+            proof: ['data', 'Powered by real clinical recordings from PhysioNet — real heart, oxygen and breathing signals, never invented numbers.'],
+            note: '<p>“The first part is live vital signs: heart rate, oxygen, pulse and breathing, updating in real time.</p><p>Here’s the key idea: one strange number means little — a sensor can slip. But a change that <strong>lasts</strong> means a lot. So OrbitCare only raises an alert when a change lasts at least ten seconds, and it escalates from yellow to red if things keep getting worse.</p><p>And we did not invent a single number. The signals you’ll see are <strong>real clinical recordings</strong> from PhysioNet — and every value can be traced back to the exact row it came from.”</p>',
+        },
+        ar: {
+            kicker: 'الميزة 1 · العلامات الحيوية لحظة بلحظة',
+            title: 'نرى الجسم مباشرةً — ونلتقط التغيّر مبكرًا',
+            why: 'رقم غريب واحد لا يعني الكثير. أما التغيّر المستمر فيعني الكثير.',
+            cards: [['4 علامات حيوية مباشرة', 'النبض، والأكسجين (SpO₂)، ونبض الإصبع، والتنفس — كل قراءة على الحسّاس الذي يقيسها، مع موجتها الحقيقية'], ['أخضر · أصفر · أحمر', 'نطاقات واضحة. التنبيه لا يصدر إلا إذا استمر التغيّر 10 ثوانٍ — إنذارات كاذبة أقل'], ['تنبيهات تتصاعد', 'الأصفر يصبح أحمر إذا استمر الوضع بالسوء — وكل قيمة يمكن تتبّعها إلى مصدرها']],
+            proof: ['data', 'يعمل على تسجيلات سريرية حقيقية من PhysioNet — إشارات قلب وأكسجين وتنفس حقيقية، لا أرقام مخترعة.'],
+            note: '<p>«الجزء الأول هو العلامات الحيوية المباشرة: النبض، والأكسجين، ونبض الإصبع، والتنفس — تتحدّث لحظة بلحظة.</p><p>الفكرة الأساسية: رقم غريب واحد لا يعني الكثير — قد ينزلق الحسّاس. أما التغيّر الذي <strong>يستمر</strong> فيعني الكثير. لذلك لا يصدر OrbitCare تنبيهًا إلا إذا استمر التغيّر 10 ثوانٍ على الأقل، ويتصاعد من الأصفر إلى الأحمر إذا ساء الوضع.</p><p>ولم نخترع رقمًا واحدًا: الإشارات التي سترونها <strong>تسجيلات سريرية حقيقية</strong> من PhysioNet، وكل قيمة يمكن تتبّعها إلى السطر الذي جاءت منه بالضبط.»</p>',
+        },
+    },
+    // 7 — daily check-in
+    {
+        layout: 'feature',
+        en: {
+            kicker: 'Feature 2 · Daily check-in',
+            title: 'One minute a day for what no sensor can measure',
+            why: 'Fatigue, symptoms and exercise matter — but no sensor can tell how you feel.',
+            cards: [['Sleep & fatigue', 'Hours, quality, and the Samn-Perelli fatigue scale used in aviation research'], ['Exercise & bones', 'Minutes against the ISS routine of about 1.5 hours a day that protects bone and muscle'], ['Symptoms & mind', 'Eye, skin, immune and dizziness symptoms NASA has reported, dosimeter readings, and a weekly wellbeing check (PHQ-4)']],
+            proof: ['lock', 'Private by default — the astronaut decides what to share with the crew.'],
+            note: '<p>“Some of the most important things can’t be measured by a sensor: how tired you are, what symptoms you have, whether you exercised enough.</p><p>So once a day, the astronaut spends <strong>one minute</strong> on a check-in. Sleep and fatigue on a scale used in aviation research. Exercise, compared with the ISS routine of about an hour and a half a day that protects bones and muscles. Symptoms NASA has actually seen in space — eyes, skin, immunity, dizziness. And a short weekly wellbeing check.</p><p>It’s private by default — the astronaut decides what to share.”</p>',
+        },
+        ar: {
+            kicker: 'الميزة 2 · التسجيل اليومي',
+            title: 'دقيقة واحدة يوميًا لما لا يقيسه أي حسّاس',
+            why: 'الإرهاق والأعراض والتمرين أمور مهمة — لكن لا حسّاس يعرف بماذا تشعر.',
+            cards: [['النوم والإرهاق', 'عدد الساعات والجودة، ومقياس Samn-Perelli للإرهاق المستخدم في أبحاث الطيران'], ['التمرين والعظام', 'الدقائق مقارنةً بروتين المحطة: نحو ساعة ونصف يوميًا تحمي العظام والعضلات'], ['الأعراض والنفس', 'أعراض العين والجلد والمناعة والدوار التي رصدتها NASA، وقراءات الإشعاع، وفحص أسبوعي للحالة النفسية (PHQ-4)']],
+            proof: ['lock', 'خاص افتراضيًا — الرائد يقرّر ماذا يشارك مع الطاقم.'],
+            note: '<p>«بعض أهم الأمور لا يقيسها أي حسّاس: كم أنت متعب، ما الأعراض التي تشعر بها، وهل تمرّنت بما يكفي.</p><p>لذلك يقضي الرائد <strong>دقيقة واحدة</strong> يوميًا في تسجيل سريع: النوم والإرهاق على مقياس مستخدم في أبحاث الطيران، والتمرين مقارنةً بروتين المحطة الذي يقارب ساعة ونصف يوميًا لحماية العظام والعضلات، والأعراض التي رصدتها NASA فعلًا في الفضاء — العين والجلد والمناعة والدوار، وفحص أسبوعي قصير للحالة النفسية.</p><p>وهو خاص افتراضيًا — الرائد يقرّر ماذا يشارك.»</p>',
+        },
+    },
+    // 8 — alertness
+    {
+        layout: 'feature',
+        en: {
+            kicker: 'Feature 3 · Alertness check',
+            title: 'A 3-minute test that shows when the brain is tired',
+            why: 'A tired astronaut can make mistakes in critical tasks — docking, repairs, spacewalks.',
+            cards: [['The test NASA uses', 'A 3-minute reaction test (PVT-B) — the format of the ISS Reaction Self Test since 2009'], ['Eye signs', 'The camera measures blinks and eye closure on the device itself — no video is ever stored or sent'], ['Compared with you', 'Results are compared with the astronaut’s own previous tests, not with strangers']],
+            proof: ['book', 'Scoring follows Basner et al. (2011): a reaction of 355 ms or slower counts as a lapse.'],
+            note: '<p>“Fatigue is dangerous in space: a tired astronaut can make mistakes during docking, repairs or a spacewalk.</p><p>So we built an alertness check around the test NASA itself uses — a <strong>three-minute reaction test</strong>, the same format as the Reaction Self Test on the ISS. While you take it, the camera can measure blinks and eye closure — <strong>on the device itself</strong>; no video is ever stored or sent.</p><p>And because everyone is different, results are compared with the astronaut’s <strong>own</strong> history, not with an average stranger.”</p>',
+        },
+        ar: {
+            kicker: 'الميزة 3 · فحص اليقظة',
+            title: 'اختبار في 3 دقائق يكشف متى يكون الدماغ متعبًا',
+            why: 'الرائد المتعب قد يخطئ في مهام حرجة — الالتحام، والإصلاحات، والسير في الفضاء.',
+            cards: [['الاختبار الذي تستخدمه NASA', 'اختبار ردّة فعل لمدة 3 دقائق (PVT-B) — بصيغة «اختبار ردّة الفعل الذاتي» على المحطة منذ 2009'], ['علامات العين', 'الكاميرا تقيس الرمش وإغلاق العين على الجهاز نفسه — لا يُحفظ أي فيديو ولا يُرسل'], ['مقارنة بنفسك', 'النتائج تُقارن بالاختبارات السابقة للرائد نفسه، لا بأشخاص آخرين']],
+            proof: ['book', 'طريقة الحساب من Basner وآخرين (2011): ردّة الفعل 355 ملّي ثانية أو أبطأ تُحسب «هفوة».'],
+            note: '<p>«الإرهاق خطير في الفضاء: الرائد المتعب قد يخطئ أثناء الالتحام أو الإصلاحات أو السير في الفضاء.</p><p>لذلك بنينا فحص اليقظة حول الاختبار الذي تستخدمه NASA نفسها — <strong>اختبار ردّة فعل لمدة ثلاث دقائق</strong>، بنفس صيغة الاختبار المستخدم على المحطة. وأثناء الاختبار، تقيس الكاميرا الرمش وإغلاق العين <strong>على الجهاز نفسه</strong> — لا يُحفظ أي فيديو ولا يُرسل.</p><p>ولأن كل شخص مختلف، نقارن النتائج بتاريخ الرائد <strong>نفسه</strong>، لا بمتوسط أشخاص غرباء.»</p>',
+        },
+    },
+    // 9 — AI assistant
+    {
+        layout: 'feature',
+        en: {
+            kicker: 'Feature 4 · AI health assistant',
+            title: 'Someone to ask — right now, on board',
+            why: 'When the doctor is minutes away, “What does this mean, and what should I do?” can’t wait.',
+            cards: [['A general doctor + specialists', 'Starts with a general doctor, then refers to a specialist who already knows the conversation'], ['Uses your real data', 'Answers are based on the astronaut’s own recorded vitals and alerts'], ['Safe by design', 'Guidance, never diagnosis. Trusted medical sources (MedlinePlus, openFDA). No names or IDs sent']],
+            proof: ['offline', 'Works without internet using built-in rule-based analysis; an online AI model is used only when a link to Earth exists.'],
+            note: '<p>“When the doctor is minutes away, the question ‘what does this mean, and what should I do?’ can’t wait. So OrbitCare has an AI health assistant.</p><p>It works like a real clinic: you start with a <strong>general doctor</strong>, and if needed it refers you to a <strong>specialist</strong> who already knows your conversation — you never repeat yourself. It reads your own recorded data, and it uses trusted medical sources like MedlinePlus.</p><p>It gives guidance, <strong>never a diagnosis</strong>. And with no internet, it still works using built-in rule-based analysis.”</p>',
+        },
+        ar: {
+            kicker: 'الميزة 4 · المساعد الصحي الذكي',
+            title: 'أحدٌ تسأله — الآن، على متن المركبة',
+            why: 'حين يكون الطبيب على بُعد دقائق، سؤال «ماذا يعني هذا، وماذا أفعل؟» لا يحتمل الانتظار.',
+            cards: [['طبيب عام + أخصائيون', 'يبدأ بطبيب عام، ثم يحوّل إلى أخصائي يعرف المحادثة مسبقًا'], ['يستخدم بياناتك الحقيقية', 'الإجابات مبنية على العلامات الحيوية والتنبيهات المسجّلة للرائد نفسه'], ['آمن من التصميم', 'إرشاد لا تشخيص، ومصادر طبية موثوقة مثل MedlinePlus و openFDA. لا تُرسل أسماء ولا أرقام هوية']],
+            proof: ['offline', 'يعمل دون إنترنت بتحليل مدمج قائم على القواعد؛ ولا يُستخدم نموذج الذكاء الاصطناعي المتصل إلا عند وجود اتصال بالأرض.'],
+            note: '<p>«حين يكون الطبيب على بُعد دقائق، سؤال ‹ماذا يعني هذا وماذا أفعل؟› لا يحتمل الانتظار. لذلك في OrbitCare مساعد صحي ذكي.</p><p>يعمل مثل عيادة حقيقية: تبدأ مع <strong>طبيب عام</strong>، وإذا احتجت يحوّلك إلى <strong>أخصائي</strong> يعرف محادثتك مسبقًا — فلا تكرّر كلامك. يقرأ بياناتك المسجّلة، ويستخدم مصادر طبية موثوقة مثل MedlinePlus.</p><p>يعطي إرشادًا، <strong>ولا يشخّص أبدًا</strong>. وحتى دون إنترنت يبقى يعمل بتحليل مدمج قائم على القواعد.»</p>',
+        },
+    },
+    // 10 — crew & emergencies
+    {
+        layout: 'feature',
+        en: {
+            kicker: 'Feature 5 · Crew & emergencies',
+            title: 'When one astronaut is in danger, the whole crew knows what to do',
+            why: 'In space, the nearest help is the person floating next to you.',
+            cards: [['Missions & crews', 'The mission commander creates the mission and chooses its crew'], ['Emergency alert', 'A red window opens for every crewmate: who it is, what they feel, and what to do now'], ['A coordinated response', 'See who is coming and who has seen the alert, with a live status bar for the whole crew']],
+            note: '<p>“In space, the nearest help is the person floating next to you. So health in OrbitCare is a <strong>team</strong> matter.</p><p>The mission commander creates the mission and its crew. When one astronaut is in danger, a <strong>red emergency window</strong> opens for every crewmate: who it is, what they’re feeling, and what to do right now. Everyone can see who is coming and who has seen the alert — so no one is left wondering, and no one is left alone.”</p>',
+        },
+        ar: {
+            kicker: 'الميزة 5 · الطاقم والطوارئ',
+            title: 'حين يكون أحد الرواد في خطر، يعرف الطاقم كله ماذا يفعل',
+            why: 'في الفضاء، أقرب مساعدة هي الشخص الذي يطفو بجانبك.',
+            cards: [['المهمات والطواقم', 'قائد المهمة ينشئ المهمة ويختار طاقمها'], ['تنبيه طوارئ', 'نافذة حمراء تظهر لكل أفراد الطاقم: مَن هو، بماذا يشعر، وماذا نفعل الآن'], ['استجابة منسّقة', 'نرى مَن قادم ومَن شاهد التنبيه، مع شريط حالة مباشر للطاقم كله']],
+            note: '<p>«في الفضاء، أقرب مساعدة هي الشخص الذي يطفو بجانبك. لذلك الصحة في OrbitCare مسؤولية <strong>فريق</strong>.</p><p>قائد المهمة ينشئ المهمة ويختار طاقمها. وحين يكون أحد الرواد في خطر، تظهر <strong>نافذة طوارئ حمراء</strong> لكل أفراد الطاقم: مَن هو، بماذا يشعر، وماذا نفعل الآن. والجميع يرى مَن قادم ومَن شاهد التنبيه — فلا يبقى أحد حائرًا، ولا يبقى أحد وحده.»</p>',
+        },
+    },
+    // 11 — sleep headband
+    {
+        layout: 'flow',
+        en: {
+            kicker: 'Feature 6 · Deep sleep',
+            title: 'A headband that <span class="accent">helps deep sleep</span> — not just measures it',
+            steps: [['brain', 'Read', 'Dry EEG sensors read brain waves all night'], ['wave', 'Detect', 'It finds the slow waves of deep sleep'], ['sound', 'Time', 'A soft sound lands on the peak of each wave'], ['adapt', 'Adapt', 'Volume fits each astronaut — silent at any sign of waking']],
+            proof: ['light', 'Cabin light follows NASA’s HERA lighting study: warmer, and 96% dimmer in the 3 hours before bed.'],
+            note: '<p>“Remember: three out of four ISS astronauts used sleep medication. So we didn’t want to just <strong>measure</strong> sleep — we wanted to <strong>help</strong> it.</p><p>Our headband reads brain waves through the night. When deep sleep begins, it plays a soft sound exactly at the <strong>peak of each slow wave</strong>. It learns the right volume for each astronaut, and goes silent at any sign of waking. And the cabin light follows NASA’s HERA lighting study — warmer and much dimmer before bed.”</p>',
+        },
+        ar: {
+            kicker: 'الميزة 6 · النوم العميق',
+            title: 'عصابة رأس <span class="accent">تساعد على النوم العميق</span> — لا تقيسه فقط',
+            steps: [['brain', 'نقرأ', 'حسّاسات EEG جافة تقرأ موجات الدماغ طوال الليل'], ['wave', 'نكتشف', 'تلتقط الموجات البطيئة للنوم العميق'], ['sound', 'نوقّت', 'صوت خافت يصل عند قمة كل موجة'], ['adapt', 'نتكيّف', 'العلو يناسب كل رائد — ويصمت عند أي علامة استيقاظ']],
+            proof: ['light', 'إضاءة المقصورة تتبع دراسة HERA للإضاءة من NASA: أدفأ، وأخفت بنسبة <span dir="ltr">96%</span> في الساعات الثلاث قبل النوم.'],
+            note: '<p>«تذكّروا: ثلاثة من كل أربعة رواد على المحطة استخدموا أدوية للنوم. لذلك لم نرد أن <strong>نقيس</strong> النوم فقط — بل أن <strong>نساعده</strong>.</p><p>عصابتنا تقرأ موجات الدماغ طوال الليل. وحين يبدأ النوم العميق، تُصدر صوتًا خافتًا بالضبط عند <strong>قمة كل موجة بطيئة</strong>. وتتعلّم العلو المناسب لكل رائد، وتصمت عند أي علامة استيقاظ. وإضاءة المقصورة تتبع دراسة HERA من NASA — أدفأ وأخفت بكثير قبل النوم.»</p>',
+        },
+    },
+    // 12 — the sleep science (handles the obvious question before it is asked)
+    {
+        layout: 'stats',
+        en: {
+            kicker: 'The science behind it',
+            title: 'Timing is everything',
+            stats: [['+16%', 'slow-wave activity in young adults with sounds timed to slow waves (2018)'], ['30%', 'less deep sleep when sounds are badly timed (2023)'], ['ISS', 'a dry-EEG sleep headband has already been worn in orbit (DREAMS, 2023)']],
+            hazards: 'A research direction: not yet tested in space as a deep-sleep aid.',
+            cite: 'Sources: home closed-loop stimulation study (2018) · Fehér et al. (2023) · DREAMS experiment on the ISS (2023) · NASA HERA lighting study (2022)',
+            note: '<p>“Why the peak of the wave? Because <strong>timing decides everything</strong>. Sounds timed to slow waves increased deep-sleep activity in young adults by 16 percent — but badly timed sounds actually cut deep sleep by 30 percent. That’s why our system only plays when it’s sure, and adapts.</p><p>A sleep headband like this has already been worn on the ISS. Using it to <strong>deepen</strong> sleep in space is the next step — and we present it honestly as our research direction.”</p>',
+        },
+        ar: {
+            kicker: 'العلم وراء الفكرة',
+            title: 'التوقيت هو كل شيء',
+            stats: [['<span dir="ltr">+16%</span>', 'زيادة في نشاط الموجات البطيئة لدى الشباب مع أصوات موقوتة على الموجات (2018)'], ['<span dir="ltr">30%</span>', 'نوم عميق أقل حين يكون توقيت الصوت خاطئًا (2023)'], ['ISS', 'عصابة نوم بحسّاسات EEG جافة ارتُديت فعلًا في المدار — تجربة DREAMS ‏(2023)']],
+            hazards: 'اتجاه بحثي: لم يُجرَّب بعد في الفضاء كوسيلة لتعميق النوم.',
+            cite: 'المصادر: دراسة التحفيز الصوتي في المنزل (2018) · Fehér وآخرون (2023) · تجربة DREAMS على محطة الفضاء (2023) · دراسة HERA للإضاءة من NASA (2022)',
+            note: '<p>«لماذا قمة الموجة؟ لأن <strong>التوقيت يحسم كل شيء</strong>. الأصوات الموقوتة على الموجات البطيئة زادت نشاط النوم العميق لدى الشباب بنسبة 16% — بينما الأصوات في توقيت خاطئ قلّلت النوم العميق 30%. لذلك نظامنا لا يُصدر صوتًا إلا حين يتأكد، ويتكيّف.</p><p>وعصابة نوم كهذه ارتُديت فعلًا على محطة الفضاء. استخدامها <strong>لتعميق</strong> النوم في الفضاء هو الخطوة التالية — ونعرضه بصدق كاتجاه بحثي.»</p>',
+        },
+    },
+    // 13 — why it can be trusted (validity)
+    {
+        layout: 'trust',
+        en: {
+            kicker: 'Why you can trust it',
+            title: 'Built to be credible — not just impressive',
+            cards: [['data', 'Real data', 'Real clinical recordings; every value traceable, and stored values can’t be edited'], ['book', 'Verified science', 'Every number and rule comes from NASA or published research'], ['lock', 'Privacy first', 'No video stored, private check-ins, no personal data sent to AI'], ['offline', 'Works offline', 'Everything runs on board — no internet needed'], ['lang', 'Two languages', 'Full Arabic and English, right-to-left included'], ['check', 'Tested', '124 automated checks pass — from logins to alerts']],
+            note: '<p>“A health system is only useful if you can <strong>trust</strong> it. So we built OrbitCare to be credible, not just impressive.</p><p>The data is real, and every value can be traced to its source — stored values can’t even be edited. Every number and rule you saw comes from NASA or published research. Privacy comes first: no video is stored, and no personal data is sent to AI. It works fully offline, in Arabic and English. And 124 automated checks make sure it behaves the way we say it does.”</p>',
+        },
+        ar: {
+            kicker: 'لماذا يمكن الوثوق به',
+            title: 'بُني ليكون موثوقًا — لا مبهرًا فقط',
+            cards: [['data', 'بيانات حقيقية', 'تسجيلات سريرية حقيقية؛ كل قيمة يمكن تتبّعها، ولا يمكن تعديل القيم المخزّنة'], ['book', 'علم موثّق', 'كل رقم وكل قاعدة من NASA أو من أبحاث منشورة'], ['lock', 'الخصوصية أولًا', 'لا يُحفظ أي فيديو، والتسجيلات خاصة، ولا تُرسل بيانات شخصية للذكاء الاصطناعي'], ['offline', 'يعمل دون إنترنت', 'كل شيء يعمل على متن المركبة'], ['lang', 'لغتان', 'العربية والإنجليزية بالكامل، مع الكتابة من اليمين لليسار'], ['check', 'مُختبَر', '124 فحصًا آليًا ناجحًا — من تسجيل الدخول إلى التنبيهات']],
+            note: '<p>«النظام الصحي لا يفيد إلا إذا استطعت أن <strong>تثق</strong> به. لذلك بنينا OrbitCare ليكون موثوقًا، لا مبهرًا فقط.</p><p>البيانات حقيقية، وكل قيمة يمكن تتبّعها إلى مصدرها — ولا يمكن حتى تعديل القيم المخزّنة. كل رقم وكل قاعدة رأيتموها من NASA أو من أبحاث منشورة. الخصوصية أولًا: لا يُحفظ أي فيديو، ولا تُرسل بيانات شخصية للذكاء الاصطناعي. ويعمل بالكامل دون إنترنت، بالعربية والإنجليزية. و124 فحصًا آليًا تضمن أنه يعمل كما نقول.»</p>',
+        },
+    },
+    // 14 — live demo
+    {
+        layout: 'demo', cls: 'demo',
+        en: {
+            kicker: 'LIVE',
+            title: 'Now, let’s see it work',
+            list: ['Vital signs', '3D vest', 'Alertness check', 'AI assistant', 'Crew emergency', 'Deep sleep'],
+            note: '<p><strong>Before the talk:</strong> log in as Astronaut 03 and press “Restart from the beginning” on the dashboard, so the recording is live (its oxygen is low → red alerts).</p><ol><li><strong>Dashboard</strong> — point at the red oxygen alert: “It waited for a lasting change, then escalated.”</li><li>Click the sensor link under a vital → <strong>3D vest</strong>: “This is the real ECG, glowing on the electrode that measures it.”</li><li><strong>Alertness check</strong> — start it: “Three minutes, the NASA format, and the camera never records video.”</li><li><strong>AI assistant</strong> — type “I feel dizzy and short of breath”: it reads the real data and suggests a specialist when needed.</li><li><strong>Crew</strong> — the emergency card in the mission chat.</li><li><strong>Sleep simulation</strong> — “Deep sleep” chapter (sound on each wave peak), then “Waking signs” (it learns the volume).</li></ol>',
+        },
+        ar: {
+            kicker: 'مباشر',
+            title: 'والآن، لنشاهده يعمل',
+            list: ['العلامات الحيوية', 'السترة ثلاثية الأبعاد', 'فحص اليقظة', 'المساعد الذكي', 'طوارئ الطاقم', 'النوم العميق'],
+            note: '<p><strong>قبل العرض:</strong> ادخلي بحساب Astronaut 03 واضغطي «إعادة التشغيل من البداية» في لوحة التحكم، ليكون التسجيل مباشرًا (الأكسجين عنده منخفض ← تنبيهات حمراء).</p><ol><li><strong>لوحة التحكم</strong> — أشيري إلى تنبيه الأكسجين الأحمر: «انتظر تغيّرًا مستمرًا، ثم تصاعد».</li><li>اضغطي رابط الحسّاس تحت أي قراءة ← <strong>السترة</strong>: «هذا تخطيط قلب حقيقي، يضيء على القطب الذي يقيسه».</li><li><strong>فحص اليقظة</strong> — ابدئيه: «3 دقائق، بصيغة NASA، والكاميرا لا تسجّل فيديو أبدًا».</li><li><strong>المساعد الذكي</strong> — اكتبي «أشعر بدوار وضيق في التنفس»: يقرأ البيانات الحقيقية ويقترح أخصائيًا عند الحاجة.</li><li><strong>الطاقم</strong> — بطاقة الطوارئ في محادثة المهمة.</li><li><strong>محاكاة النوم</strong> — فصل «نوم عميق» (الصوت عند قمة كل موجة)، ثم «علامات استيقاظ» (يتعلّم العلو).</li></ol>',
+        },
+    },
+    // 15 — impact
+    {
+        layout: 'feature',
+        en: {
+            kicker: 'Impact',
+            title: 'Earlier signs. Faster action. <span class="accent">More independent crews.</span>',
+            why: 'The farther we explore, the more each crew must be its own medical team.',
+            cards: [['For the astronaut', 'Understands their own body and acts early — without waiting for Earth'], ['For the crew', 'Everyone knows who needs help, and exactly what to do'], ['Beyond space', 'The same approach could support people far from a doctor on Earth — remote stations, ships and isolated areas']],
+            note: '<p>“So why does this matter? For the <strong>astronaut</strong>: they understand their own body and can act early, without waiting for Earth. For the <strong>crew</strong>: everyone knows who needs help and what to do. And <strong>beyond space</strong>: the same approach could support people on Earth who are far from a doctor — on remote stations, ships, or isolated areas.</p><p>The farther we explore, the more each crew must be its own medical team. OrbitCare gives them the tools.”</p>',
+        },
+        ar: {
+            kicker: 'الأثر',
+            title: 'علامات أبكر. تصرّف أسرع. <span class="accent">طاقم أكثر استقلالًا.</span>',
+            why: 'كلما ابتعدنا في الاستكشاف، صار على كل طاقم أن يكون فريقه الطبي بنفسه.',
+            cards: [['للرائد', 'يفهم جسمه ويتصرّف مبكرًا — دون انتظار الأرض'], ['للطاقم', 'الجميع يعرف مَن يحتاج المساعدة، وماذا يفعل بالضبط'], ['خارج الفضاء', 'النهج نفسه يمكن أن يخدم الناس البعيدين عن الطبيب على الأرض — المحطات النائية والسفن والمناطق المعزولة']],
+            note: '<p>«فلماذا يهم هذا؟ <strong>للرائد</strong>: يفهم جسمه ويتصرّف مبكرًا دون انتظار الأرض. <strong>للطاقم</strong>: الجميع يعرف مَن يحتاج المساعدة وماذا يفعل. <strong>وخارج الفضاء</strong>: النهج نفسه يمكن أن يخدم الناس على الأرض البعيدين عن الطبيب — في المحطات النائية والسفن والمناطق المعزولة.</p><p>كلما ابتعدنا في الاستكشاف، صار على كل طاقم أن يكون فريقه الطبي بنفسه. وOrbitCare يعطيه الأدوات.»</p>',
+        },
+    },
+    // 16 — back to the same night (callback) + ready answers for the questions
+    {
+        layout: 'story', cls: 'story closing', deco: 'star',
+        en: {
+            kicker: 'Day 140 · 03:00 — with OrbitCare',
+            title: 'The alert comes in seconds. The crew knows what to do. <span class="accent">No one waits for Earth.</span>',
+            lead: 'OrbitCare — care that travels with the crew. Thank you.',
+            note: '<p>“Let’s go back to that night. Day 140, three in the morning. This time, the change is caught within <strong>seconds</strong>. The astronaut sees what it means. The crew gets the alert and knows exactly what to do. And no one has to wait 20 minutes for Earth.</p><p>That is OrbitCare — care that travels with the crew. Thank you.”</p><p><strong>Ready answers:</strong></p><ol><li><strong>Is the data real?</strong> Yes — real clinical recordings from PhysioNet (intensive-care patients), replayed live. In flight, the same pipeline would read the vest’s own sensors.</li><li><strong>Does it diagnose?</strong> No — early warning and guidance. Decisions stay with the crew and the flight surgeon.</li><li><strong>Where do the thresholds come from?</strong> General adult resting ranges for a prototype — not yet validated for spaceflight; the alertness test also compares each astronaut with their own baseline.</li><li><strong>No internet?</strong> Everything runs on board; the online AI is optional.</li><li><strong>Privacy?</strong> No video is stored, check-ins are private, no names are sent to AI.</li><li><strong>Has the sleep sound been tested in space?</strong> Not yet — the headband has been worn on the ISS, but the timed sound is our research direction.</li></ol>',
+        },
+        ar: {
+            kicker: 'اليوم 140 · 3:00 فجرًا — مع OrbitCare',
+            title: 'التنبيه يصل خلال ثوانٍ. الطاقم يعرف ماذا يفعل. <span class="accent">لا أحد ينتظر الأرض.</span>',
+            lead: 'OrbitCare — رعاية تسافر مع الطاقم. شكرًا لكم.',
+            note: '<p>«لنعد إلى تلك الليلة. اليوم 140، الثالثة فجرًا. هذه المرة، يُلتقط التغيّر خلال <strong>ثوانٍ</strong>. الرائد يرى ماذا يعني. والطاقم يصله التنبيه ويعرف ماذا يفعل بالضبط. ولا أحد ينتظر 20 دقيقة ليرد عليه أحد من الأرض.</p><p>هذا هو OrbitCare — رعاية تسافر مع الطاقم. شكرًا لكم.»</p><p><strong>أجوبة جاهزة:</strong></p><ol><li><strong>هل البيانات حقيقية؟</strong> نعم — تسجيلات سريرية حقيقية من PhysioNet (مرضى في العناية المركزة) تُعاد مباشرةً. وفي الرحلة، نفس الطريقة تقرأ حسّاسات السترة نفسها.</li><li><strong>هل يشخّص؟</strong> لا — إنذار مبكر وإرشاد. القرار يبقى للطاقم ولطبيب الرحلة.</li><li><strong>من أين الحدود؟</strong> نطاقات عامة للبالغين في الراحة، لنموذج أولي — لم تُعتمد بعد لرحلات الفضاء؛ وفحص اليقظة يقارن كل رائد بمعدله الخاص.</li><li><strong>دون إنترنت؟</strong> كل شيء يعمل على المركبة؛ الذكاء الاصطناعي المتصل اختياري.</li><li><strong>الخصوصية؟</strong> لا يُحفظ فيديو، والتسجيلات خاصة، ولا تُرسل أسماء للذكاء الاصطناعي.</li><li><strong>هل جُرّب صوت النوم في الفضاء؟</strong> ليس بعد — العصابة ارتُديت على المحطة، أما الصوت الموقوت فهو اتجاهنا البحثي.</li></ol>',
+        },
+    },
+];
+
+// ---------------------------------------------------------------- state
+const params = new URLSearchParams(location.search);
+const saved = (() => { try { return localStorage.getItem('orbitcare-pitch-lang'); } catch { return null; } })();
+let lang = (['ar', 'en'].includes(params.get('lang')) ? params.get('lang') : saved) === 'ar' ? 'ar' : 'en';
+let index = Math.min(SLIDES.length - 1, Math.max(0, (parseInt(location.hash.slice(1), 10) || 1) - 1));
+let notesOpen = false;
+
+const $ = (sel) => document.querySelector(sel);
+const tr = (key) => UI[lang][key];
+const proofHtml = (p) => (p ? `<p class="proof"><span class="icon-box">${svg(p[0])}</span><span>${p[1]}</span></p>` : '');
+
+// Slide texts are our own fixed strings (they contain <span>/<b> highlights), never user input.
+function slideHtml(slide, i) {
+    const c = slide[lang];
+    let body = '';
+    switch (slide.layout) {
+        case 'story':
+            body = `<h1>${c.title}</h1><p class="lead">${c.lead}</p>`;
+            break;
+        case 'challenge':
+            body = `<h2>${c.title}</h2><p class="quote">${c.quote}</p>
+                <div class="cards is-check">${c.cards.map(([h, p]) => `<div class="card"><h3>${h}</h3><p>${p}</p></div>`).join('')}</div>`;
+            break;
+        case 'stats':
+            body = `<h2>${c.title}</h2><div class="stats">${c.stats.map(([n, t]) => `<div class="stat"><b>${n}</b><span>${t}</span></div>`).join('')}</div>
+                <p class="hazards">${c.hazards}</p><p class="cite">${c.cite}</p>`;
+            break;
+        case 'flow':
+            body = `<h2>${c.title}</h2><div class="flow" style="grid-template-columns:repeat(${c.steps.length}, 1fr)">${c.steps.map(([icon, h, p], k) => `
+                <div class="step"><span class="step-num">${k + 1}</span><span class="icon-box">${svg(icon)}</span><h3>${h}</h3><p>${p}</p></div>`).join('')}</div>${proofHtml(c.proof)}`;
+            break;
+        case 'feature':
+            body = `<h2>${c.title}</h2><p class="why">${c.why}</p>
+                <div class="cards">${c.cards.map(([h, p]) => `<div class="card"><h3>${h}</h3><p>${p}</p></div>`).join('')}</div>${proofHtml(c.proof)}`;
+            break;
+        case 'trust':
+            body = `<h2>${c.title}</h2><div class="cards is-6">${c.cards.map(([icon, h, p]) => `
+                <div class="card"><span class="icon-box">${svg(icon)}</span><div><h3>${h}</h3><p>${p}</p></div></div>`).join('')}</div>`;
+            break;
+        case 'demo':
+            body = `<h1>${c.title}</h1><ul class="demo-list">${c.list.map((x) => `<li>${x}</li>`).join('')}</ul>
+                <a class="open-app" href="../../pages/dashboard.php?lang=${lang}" target="_blank" rel="noopener">${tr('open')}</a>`;
+            break;
+    }
+    const deco = slide.deco === 'orbit' ? '<div class="orbit" aria-hidden="true"></div>'
+        : slide.deco === 'star' ? `<div class="big-star" aria-hidden="true">${svg('star')}</div>` : '';
+    const kicker = slide.layout === 'demo' ? `<p class="live-dot">${c.kicker}</p>` : `<p class="kicker">${c.kicker}</p>`;
+    return `<section class="slide ${slide.cls ?? ''}${i === index ? ' is-active' : ''}" data-slide="${i}" aria-hidden="${i !== index}">${deco}${kicker}${body}</section>`;
+}
+
+function render() {
+    document.documentElement.lang = lang;
+    document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
+    $('[data-slides]').innerHTML = SLIDES.map(slideHtml).join('');
+    $('[data-lang]').textContent = tr('lang');
+    $('[data-notes]').textContent = tr('notes');
+    $('[data-full]').textContent = tr('full');
+    $('[data-prev]').setAttribute('aria-label', tr('prev'));
+    $('[data-next]').setAttribute('aria-label', tr('next'));
+    $('[data-notes-title]').textContent = tr('notes_title');
+    show(index);
+}
+
+function show(i) {
+    index = Math.min(SLIDES.length - 1, Math.max(0, i));
+    document.querySelectorAll('[data-slide]').forEach((el) => {
+        const on = Number(el.dataset.slide) === index;
+        el.classList.toggle('is-active', on);
+        el.setAttribute('aria-hidden', String(!on));
+    });
+    $('[data-count]').textContent = `${index + 1} / ${SLIDES.length}`;
+    $('[data-progress]').style.width = `${((index + 1) / SLIDES.length) * 100}%`;
+    $('[data-notes-body]').innerHTML = SLIDES[index][lang].note;
+    $('[data-notes-panel]').scrollTop = 0;
+    history.replaceState(null, '', `${location.search}#${index + 1}`);
+}
+
+const next = () => show(index + 1);
+const prev = () => show(index - 1);
+function toggleNotes() { notesOpen = !notesOpen; document.body.classList.toggle('notes-open', notesOpen); $('[data-notes]').setAttribute('aria-pressed', String(notesOpen)); }
+function toggleLang() { lang = lang === 'ar' ? 'en' : 'ar'; try { localStorage.setItem('orbitcare-pitch-lang', lang); } catch { /* not remembered */ } render(); }
+function toggleFull() { if (document.fullscreenElement) document.exitFullscreen(); else document.documentElement.requestFullscreen?.(); }
+
+$('[data-next]').addEventListener('click', next);
+$('[data-prev]').addEventListener('click', prev);
+$('[data-notes]').addEventListener('click', toggleNotes);
+$('[data-lang]').addEventListener('click', toggleLang);
+$('[data-full]').addEventListener('click', toggleFull);
+
+document.addEventListener('keydown', (e) => {
+    if (e.altKey || e.ctrlKey || e.metaKey) return;
+    const rtl = lang === 'ar';
+    const k = e.key;
+    if (k === ' ' || k === 'PageDown' || k === 'ArrowDown' || k === (rtl ? 'ArrowLeft' : 'ArrowRight')) { e.preventDefault(); next(); }
+    else if (k === 'PageUp' || k === 'ArrowUp' || k === (rtl ? 'ArrowRight' : 'ArrowLeft')) { e.preventDefault(); prev(); }
+    else if (k === 'Home') show(0);
+    else if (k === 'End') show(SLIDES.length - 1);
+    else if (k === 'n' || k === 'N') toggleNotes();
+    else if (k === 'l' || k === 'L') toggleLang();
+    else if (k === 'f' || k === 'F') toggleFull();
+});
+// a click on the slide (not on a link) goes to the next slide
+$('[data-stage]').addEventListener('click', (e) => { if (!e.target.closest('a')) next(); });
+
+// the controls fade out while the mouse rests
+let idleTimer;
+const wake = () => { document.body.classList.remove('idle'); clearTimeout(idleTimer); idleTimer = setTimeout(() => document.body.classList.add('idle'), 2500); };
+document.addEventListener('mousemove', wake);
+wake();
+
+// ?print → every slide on its own 1600×900 page; ?print=notes → each slide with its speaker script on an A4 page.
+function renderPrint(withNotes) {
+    document.documentElement.lang = lang;
+    document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
+    document.body.classList.add('print');
+    const brand = $('.brand').outerHTML;
+    const pages = SLIDES.map((slide, i) => `
+        <div class="page ${withNotes ? 'page--notes' : 'page--slide'}">
+            <div class="stage">${brand}${slideHtml(slide, i)}</div>
+            ${withNotes ? `<div class="page-notes"><h4>${i + 1} / ${SLIDES.length} · ${tr('notes_title')}</h4>${slide[lang].note}</div>` : ''}
+        </div>`).join('');
+    document.body.insertAdjacentHTML('beforeend', `<div class="print-pages">${pages}</div>`);
+    document.querySelectorAll('.print-pages .slide').forEach((el) => { el.classList.add('is-active'); el.removeAttribute('aria-hidden'); });
+    const page = document.createElement('style');
+    page.textContent = withNotes ? '@page { size: A4 portrait; margin: 0; }' : '@page { size: 1600px 900px; margin: 0; }';
+    document.head.append(page);
+}
+
+if (params.has('print')) {
+    renderPrint(params.get('print') === 'notes');
+} else {
+    if (params.has('notes')) toggleNotes();
+    render();
+}
+</script>
+</body>
+</html>
